@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Röchling — Metrologia v6</title>
+<title>Röchling — Metrologia v7</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;500;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, deleteDoc,
+  getFirestore, collection, addDoc, deleteDoc, updateDoc,
   doc, onSnapshot, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -26,7 +27,7 @@ const COL = "ensaios";
 
 window._db  = db;
 window._col = COL;
-window._fbFns = { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp };
+window._fbFns = { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, query, orderBy, serverTimestamp };
 
 const q = query(collection(db, COL), orderBy("createdAt", "asc"));
 onSnapshot(q, snap => {
@@ -51,6 +52,7 @@ onSnapshot(q, snap => {
   --danger:#ff4757;--dangerL:rgba(255,71,87,.08);
   --warn:#ffd32a;--warnL:rgba(255,211,42,.08);
   --purple:#a78bfa;--purpleL:rgba(167,139,250,.08);
+  --edit:#f59e0b;--editL:rgba(245,158,11,.08);
   --shadow:0 2px 12px rgba(0,0,0,.4);--shadowLg:0 8px 40px rgba(0,0,0,.6);
   --grid-line:rgba(0,212,255,.018);
 }
@@ -65,6 +67,7 @@ onSnapshot(q, snap => {
   --danger:#dc2626;--dangerL:rgba(220,38,38,.07);
   --warn:#d97706;--warnL:rgba(217,119,6,.07);
   --purple:#7c3aed;--purpleL:rgba(124,58,237,.07);
+  --edit:#b45309;--editL:rgba(180,83,9,.07);
   --shadow:0 2px 12px rgba(0,0,0,.08);--shadowLg:0 8px 40px rgba(0,0,0,.14);
   --grid-line:rgba(0,100,150,.025);
 }
@@ -76,7 +79,7 @@ body{
   background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
   background-size:40px 40px;
 }
-.app{max-width:1400px;margin:0 auto;padding:0 28px 60px;}
+.app{max-width:1500px;margin:0 auto;padding:0 28px 60px;}
 
 /* ── HEADER ── */
 header{
@@ -114,7 +117,7 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;width:120px;height
 .btn-danger-sm:hover{background:var(--danger);color:#fff;}
 
 /* ── METRICS ── */
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
 .mcard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,background .3s;}
 .mcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-color,var(--accent));}
 .mcard-label{font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:var(--text3);margin-bottom:8px;}
@@ -171,6 +174,13 @@ textarea{resize:vertical;min-height:52px;}
 .burst-note{background:var(--burstL);border:1px solid rgba(255,45,120,.25);border-radius:4px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--burst);letter-spacing:.06em;line-height:1.5;display:none;}
 .burst-note.visible{display:block;}
 
+/* edit mode banner */
+.edit-banner{background:var(--editL);border:1px solid rgba(245,158,11,.3);border-radius:5px;padding:10px 14px;margin-bottom:12px;display:none;align-items:center;justify-content:space-between;gap:10px;}
+.edit-banner.visible{display:flex;}
+.edit-banner-text{font-family:'Space Mono',monospace;font-size:9px;color:var(--edit);letter-spacing:.08em;}
+.btn-cancel-edit{padding:4px 12px;border-radius:3px;border:1px solid rgba(245,158,11,.4);background:transparent;color:var(--edit);font-family:'Space Mono',monospace;font-size:9px;cursor:pointer;transition:all .15s;}
+.btn-cancel-edit:hover{background:var(--edit);color:#000;}
+
 .result-box{background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:12px 16px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;transition:background .3s;}
 .result-stress{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;letter-spacing:.02em;}
 .result-stress small{font-size:10px;color:var(--text3);font-weight:400;margin-left:4px;}
@@ -190,6 +200,7 @@ textarea{resize:vertical;min-height:52px;}
 .btn-save{width:100%;padding:12px;margin-top:8px;border-radius:4px;border:none;background:var(--accent);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(0,212,255,.2);}
 .btn-save:hover{filter:brightness(1.1);}
 .btn-save:disabled{opacity:.4;cursor:not-allowed;}
+.btn-save.edit-mode{background:var(--edit);box-shadow:0 4px 20px rgba(245,158,11,.2);}
 .btn-ghost{width:100%;padding:8px;margin-top:6px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.08em;cursor:pointer;transition:all .15s;}
 .btn-ghost:hover{border-color:var(--danger);color:var(--danger);}
 .spinner{width:14px;height:14px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none;}
@@ -211,6 +222,7 @@ thead th{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.12em;t
 tbody td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);}
 tbody tr:last-child td{border-bottom:none;}
 tbody tr:hover td{background:var(--bg3);}
+tbody tr.editing-row td{background:var(--editL);border-bottom-color:rgba(245,158,11,.3);}
 .td-mono{font-family:'Space Mono',monospace;color:var(--text);letter-spacing:.03em;}
 .td-date-main{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text);letter-spacing:.02em;display:block;}
 .td-date-time{font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);display:block;margin-top:2px;}
@@ -222,9 +234,11 @@ tbody tr:hover td{background:var(--bg3);}
 .res-ok{color:var(--success);font-family:'Space Mono',monospace;font-weight:700;font-size:10px;letter-spacing:.06em;}
 .res-fail{color:var(--danger);font-family:'Space Mono',monospace;font-weight:700;font-size:10px;letter-spacing:.06em;}
 .empty-td{text-align:center;padding:48px!important;color:var(--text3);font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;}
-.del-btn{background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:3px;padding:2px 8px;font-size:10px;font-family:'Space Mono',monospace;cursor:pointer;transition:all .15s;}
+.del-btn{background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:3px;padding:3px 8px;font-size:10px;font-family:'Space Mono',monospace;cursor:pointer;transition:all .15s;}
 .del-btn:hover{border-color:var(--danger);color:var(--danger);background:var(--dangerL);}
-.print-row-btn{background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:3px;padding:2px 8px;font-size:10px;font-family:'Space Mono',monospace;cursor:pointer;margin-right:4px;transition:all .15s;}
+.edit-btn{background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:3px;padding:3px 8px;font-size:10px;font-family:'Space Mono',monospace;cursor:pointer;margin-right:4px;transition:all .15s;}
+.edit-btn:hover{border-color:var(--edit);color:var(--edit);background:var(--editL);}
+.print-row-btn{background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:3px;padding:3px 8px;font-size:10px;font-family:'Space Mono',monospace;cursor:pointer;margin-right:4px;transition:all .15s;}
 .print-row-btn:hover{border-color:var(--accent);color:var(--accent);}
 
 /* ── ANÁLISE ── */
@@ -238,63 +252,35 @@ tbody tr:hover td{background:var(--bg3);}
 .btn-reset-filter{padding:8px 14px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.08em;cursor:pointer;transition:all .15s;}
 .filter-info{font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.06em;white-space:nowrap;align-self:center;}
 
-.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+/* ── STAT GRID ── */
+.stat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;position:relative;overflow:hidden;transition:background .3s;}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc-color,var(--accent));}
 .stat-label{font-family:'Space Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.14em;color:var(--text3);margin-bottom:6px;}
-.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;color:var(--sc-color,var(--text));line-height:1;}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:var(--sc-color,var(--text));line-height:1;}
 .stat-sub{font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);margin-top:4px;}
 
+/* ── CHART GRIDS ── */
 .charts-grid-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
 .charts-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.charts-grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;}
+.charts-full{display:grid;grid-template-columns:1fr;gap:16px;}
 .chart-panel{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px 20px;transition:background .3s;}
-.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.chart-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text2);}
+.chart-panel.tall{padding-bottom:22px;}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.chart-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);}
 .chart-tag{font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.06em;}
 
-/* ══════════════════════════════════════════════
-   PAINEL DE IMPRESSÃO / VISUALIZAÇÃO COM FILTROS
-══════════════════════════════════════════════ */
+/* ── PRINT PANEL ── */
 .print-panel{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:background .3s;}
-
-/* Cabeçalho do painel */
-.pp-header{
-  background:var(--bg3);border-bottom:1px solid var(--border);
-  padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-}
+.pp-header{background:var(--bg3);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .pp-title{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text2);}
-.pp-result-info{
-  font-family:'Space Mono',monospace;font-size:10px;color:var(--text3);
-  letter-spacing:.06em;display:flex;align-items:center;gap:8px;
-}
-.pp-badge{
-  display:inline-flex;align-items:center;
-  background:var(--accentL);border:1px solid rgba(0,212,255,.3);
-  color:var(--accent);border-radius:3px;
-  padding:3px 10px;font-family:'Space Mono',monospace;font-size:9px;
-  font-weight:700;letter-spacing:.1em;
-}
-
-/* Grade de filtros do painel */
-.pp-filters{
-  padding:16px 20px;border-bottom:1px solid var(--border);
-  display:grid;grid-template-columns:repeat(5,1fr) auto auto;
-  gap:10px;align-items:flex-end;
-}
+.pp-result-info{font-family:'Space Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.06em;display:flex;align-items:center;gap:8px;}
+.pp-badge{display:inline-flex;align-items:center;background:var(--accentL);border:1px solid rgba(0,212,255,.3);color:var(--accent);border-radius:3px;padding:3px 10px;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.1em;}
+.pp-filters{padding:16px 20px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr) auto auto;gap:10px;align-items:flex-end;}
 .pp-filters .field{margin-bottom:0;}
-
-/* Chips de filtro ativos */
-.pp-chips{
-  padding:10px 20px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px;
-}
-.chip{
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--bg4);border:1px solid var(--border2);
-  border-radius:20px;padding:3px 10px 3px 12px;
-  font-family:'Space Mono',monospace;font-size:9px;color:var(--text2);
-  letter-spacing:.06em;transition:all .15s;
-}
+.pp-chips{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px;}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:3px 10px 3px 12px;font-family:'Space Mono',monospace;font-size:9px;color:var(--text2);letter-spacing:.06em;transition:all .15s;}
 .chip.chip-type{border-color:rgba(0,212,255,.35);color:var(--accent);background:var(--accentL);}
 .chip.chip-burst{border-color:rgba(255,45,120,.35);color:var(--burst);background:var(--burstL);}
 .chip.chip-trac{border-color:rgba(255,107,53,.35);color:var(--trac);background:var(--tracL);}
@@ -305,55 +291,37 @@ tbody tr:hover td{background:var(--bg3);}
 .chip-remove{width:14px;height:14px;border-radius:50%;background:var(--border2);border:none;color:var(--text3);cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s;padding:0;font-family:monospace;}
 .chip-remove:hover{background:var(--danger);color:#fff;}
 .chips-empty{font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.08em;}
-
-/* Barra de ações de seleção */
-.pp-select-bar{
-  padding:12px 20px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-}
+.pp-select-bar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .sel-btn{padding:5px 12px;border-radius:3px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.08em;cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:transparent;color:var(--text3);}
 .sel-btn:hover{border-color:var(--accent);color:var(--accent);}
 .sel-btn.sel-btn-accent{border-color:rgba(0,212,255,.4);color:var(--accent);}
 .sel-count{font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);margin-left:auto;}
-
-/* Tabela de seleção */
 .print-table-wrap{max-height:320px;overflow-y:auto;border-top:none;}
 .print-table-wrap table{margin-bottom:0;}
 .print-table-wrap thead th{position:sticky;top:0;background:var(--bg3);z-index:1;}
 .chk-col{width:36px;}
 .row-checkbox{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
-
-/* Rodapé com opções e botão */
 .pp-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;}
 .pp-footer .field{margin-bottom:0;flex:1;min-width:200px;}
-.btn-print-sel{
-  padding:12px 28px;border-radius:4px;border:none;
-  background:linear-gradient(135deg,var(--accent),var(--accentD));
-  color:#000;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;
-  letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:all .15s;
-  display:flex;align-items:center;justify-content:center;gap:10px;white-space:nowrap;
-}
+.btn-print-sel{padding:12px 28px;border-radius:4px;border:none;background:linear-gradient(135deg,var(--accent),var(--accentD));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:10px;white-space:nowrap;}
 .btn-print-sel:hover{filter:brightness(1.1);}
 .btn-print-sel:disabled{opacity:.4;cursor:not-allowed;}
-.btn-visualize{
-  padding:12px 22px;border-radius:4px;border:1px solid var(--accent);
-  background:var(--accentL);color:var(--accent);
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;
-  letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:all .15s;
-  display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;
-}
+.btn-visualize{padding:12px 22px;border-radius:4px;border:1px solid var(--accent);background:var(--accentL);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;}
 .btn-visualize:hover{background:var(--accent);color:#000;}
 .btn-visualize:disabled{opacity:.4;cursor:not-allowed;}
 
-/* ── MODAL (laudo rápido aba 1) ── */
+/* ── MODAL EDIÇÃO ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
 .overlay.open{display:flex;}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:28px;width:560px;max-width:95vw;box-shadow:var(--shadowLg);max-height:90vh;overflow-y:auto;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:28px;width:640px;max-width:95vw;box-shadow:var(--shadowLg);max-height:90vh;overflow-y:auto;}
 .modal-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
 .modal-sub{font-size:11px;color:var(--text3);margin-bottom:18px;font-family:'Space Mono',monospace;letter-spacing:.04em;}
 .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.modal-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
 .modal-actions{display:flex;gap:10px;margin-top:18px;}
 .btn-cancel{flex:1;padding:10px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;}
+.btn-save-modal{flex:2;padding:11px;border-radius:4px;border:none;background:var(--edit);color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
+.btn-save-modal:hover{filter:brightness(1.1);}
 .btn-print-modal{flex:2;padding:11px;border-radius:4px;border:none;background:var(--accent);color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
 .btn-print-modal:hover{filter:brightness(1.1);}
 
@@ -371,13 +339,10 @@ tbody tr:hover td{background:var(--bg3);}
 ::-webkit-scrollbar-track{background:var(--bg2);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 
-/* ── MODAL PREVIEW ── */
+/* ── PREVIEW OVERLAY ── */
 .preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;flex-direction:column;backdrop-filter:blur(4px);}
 .preview-overlay.open{display:flex;}
-.preview-bar{
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-}
+.preview-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .preview-title{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--text2);text-transform:uppercase;}
 .preview-actions{display:flex;gap:10px;align-items:center;}
 .btn-close-preview{padding:7px 18px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:.08em;}
@@ -385,17 +350,16 @@ tbody tr:hover td{background:var(--bg3);}
 .btn-print-from-preview{padding:8px 22px;border-radius:4px;border:none;background:var(--accent);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
 .btn-print-from-preview:hover{filter:brightness(1.1);}
 .preview-frame{flex:1;background:#e8ecf0;overflow-y:auto;padding:20px;}
-.preview-page{
-  background:#fff;max-width:190mm;margin:0 auto;padding:12mm;
-  box-shadow:0 4px 32px rgba(0,0,0,.3);border-radius:2px;
-  font-family:'Barlow',sans-serif;color:#0d1117;font-size:11px;
-}
+.preview-page{background:#fff;max-width:190mm;margin:0 auto;padding:12mm;box-shadow:0 4px 32px rgba(0,0,0,.3);border-radius:2px;font-family:'Barlow',sans-serif;color:#0d1117;font-size:11px;}
 
-@media(max-width:1100px){
+/* SECTION LABEL */
+.section-label{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);margin:20px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+
+@media(max-width:1200px){
   .ensaios-grid{grid-template-columns:1fr;}
-  .metrics{grid-template-columns:repeat(2,1fr);}
+  .metrics{grid-template-columns:repeat(3,1fr);}
   .stat-grid{grid-template-columns:repeat(3,1fr);}
-  .charts-grid-2,.charts-grid-3{grid-template-columns:1fr;}
+  .charts-grid-2,.charts-grid-3,.charts-grid-4{grid-template-columns:1fr;}
   .pp-filters{grid-template-columns:1fr 1fr;}
 }
 @media print{body,*{visibility:hidden;}.no-print{display:none!important;}}
@@ -408,19 +372,12 @@ tbody tr:hover td{background:var(--bg3);}
 <header>
   <div>
     <div class="logo-title">Röchling Automotive <em>/</em> Metrologia</div>
-    <div class="logo-sub">Ensaios Mecânicos · v6</div>
+    <div class="logo-sub">Ensaios Mecânicos · v7 — Edição Completa</div>
   </div>
   <div class="header-right">
     <div style="display:flex;gap:10px">
-      <div class="date-box">
-        <div class="date-label">Data</div>
-        <div class="date-val" id="hdr-date">--/--/----</div>
-        <div class="date-weekday" id="hdr-wd">---</div>
-      </div>
-      <div class="date-box">
-        <div class="date-label">Horário</div>
-        <div class="date-val" id="hdr-time">--:--:--</div>
-      </div>
+      <div class="date-box"><div class="date-label">Data</div><div class="date-val" id="hdr-date">--/--/----</div><div class="date-weekday" id="hdr-wd">---</div></div>
+      <div class="date-box"><div class="date-label">Horário</div><div class="date-val" id="hdr-time">--:--:--</div></div>
     </div>
     <div class="theme-toggle-wrap no-print">
       <span style="font-size:14px">🌙</span>
@@ -443,24 +400,18 @@ tbody tr:hover td{background:var(--bg3);}
 
 <!-- METRICS -->
 <div class="metrics">
-  <div class="mcard" style="--accent-color:var(--accent)">
-    <div class="mcard-label">Total de ensaios</div><div class="mcard-val" id="m-total">—</div><div class="mcard-sub">na nuvem</div><div class="mcard-icon">◈</div>
-  </div>
-  <div class="mcard" style="--accent-color:var(--success);--val-color:var(--success)">
-    <div class="mcard-label">Aprovados</div><div class="mcard-val" id="m-ok">—</div><div class="mcard-sub" id="m-ok-pct">—%</div><div class="mcard-icon">✓</div>
-  </div>
-  <div class="mcard" style="--accent-color:var(--danger);--val-color:var(--danger)">
-    <div class="mcard-label">Reprovados</div><div class="mcard-val" id="m-fail">—</div><div class="mcard-sub" id="m-fail-pct">—%</div><div class="mcard-icon">✗</div>
-  </div>
-  <div class="mcard" style="--accent-color:var(--warn);--val-color:var(--warn)">
-    <div class="mcard-label">Taxa de aprovação</div><div class="mcard-val" id="m-pct">—</div><div class="mcard-sub">índice geral</div><div class="mcard-icon">%</div>
-  </div>
+  <div class="mcard" style="--accent-color:var(--accent)"><div class="mcard-label">Total de ensaios</div><div class="mcard-val" id="m-total">—</div><div class="mcard-sub">na nuvem</div><div class="mcard-icon">◈</div></div>
+  <div class="mcard" style="--accent-color:var(--success);--val-color:var(--success)"><div class="mcard-label">Aprovados</div><div class="mcard-val" id="m-ok">—</div><div class="mcard-sub" id="m-ok-pct">—%</div><div class="mcard-icon">✓</div></div>
+  <div class="mcard" style="--accent-color:var(--danger);--val-color:var(--danger)"><div class="mcard-label">Reprovados</div><div class="mcard-val" id="m-fail">—</div><div class="mcard-sub" id="m-fail-pct">—%</div><div class="mcard-icon">✗</div></div>
+  <div class="mcard" style="--accent-color:var(--warn);--val-color:var(--warn)"><div class="mcard-label">Taxa de aprovação</div><div class="mcard-val" id="m-pct">—</div><div class="mcard-sub">índice geral</div><div class="mcard-icon">%</div></div>
+  <div class="mcard" style="--accent-color:var(--purple);--val-color:var(--purple)"><div class="mcard-label">Desvio médio</div><div class="mcard-val" id="m-avg">—</div><div class="mcard-sub">% sobre especificado</div><div class="mcard-icon">Δ</div></div>
 </div>
 
 <!-- TABS -->
 <nav class="tab-nav no-print">
   <button class="tab-btn active" id="tab-ensaios" onclick="switchTab('ensaios')">◈ Ensaios &amp; Registros <span class="tab-count" id="tab-count-ensaios">0</span></button>
-  <button class="tab-btn" id="tab-analise" onclick="switchTab('analise')">▲ Análise &amp; Impressão <span class="tab-count" id="tab-count-analise">0</span></button>
+  <button class="tab-btn" id="tab-analise" onclick="switchTab('analise')">▲ Análise &amp; Gráficos <span class="tab-count" id="tab-count-analise">0</span></button>
+  <button class="tab-btn" id="tab-impressao" onclick="switchTab('impressao')">⎙ Impressão em Lote <span class="tab-count" id="tab-count-impressao">0</span></button>
 </nav>
 
 <!-- ═══ ABA 1: ENSAIOS ═══ -->
@@ -469,13 +420,19 @@ tbody tr:hover td{background:var(--bg3);}
 
     <!-- FORM -->
     <div class="panel">
-      <div class="panel-title">Novo ensaio</div>
+      <!-- Edit mode banner -->
+      <div class="edit-banner" id="edit-banner">
+        <span class="edit-banner-text">✏ MODO EDIÇÃO — Amostra: <strong id="edit-sample-label">—</strong></span>
+        <button class="btn-cancel-edit" onclick="cancelEdit()">CANCELAR</button>
+      </div>
+
+      <div class="panel-title" id="form-panel-title">Novo ensaio</div>
       <div class="type-row">
         <button class="type-btn active-comp" id="btn-comp" onclick="setType('comp')">▼ COMPRESSÃO</button>
         <button class="type-btn" id="btn-trac" onclick="setType('trac')">▲ TRAÇÃO</button>
         <button class="type-btn" id="btn-burst" onclick="setType('burst')">💥 ESTOURO</button>
       </div>
-      <div class="burst-note" id="burst-note">⚡ ENSAIO DE ESTOURO — Unidade fixada em <strong>bar</strong>. Informe a pressão especificada e a pressão de estouro encontrada.</div>
+      <div class="burst-note" id="burst-note">⚡ ENSAIO DE ESTOURO — Unidade fixada em <strong>bar</strong>.</div>
       <div class="row2">
         <div class="field"><label class="field-label">Inspetor *</label><input type="text" id="f-inspector" placeholder="Nome completo"></div>
         <div class="field"><label class="field-label">Cód. amostra *</label><input type="text" id="f-sample" placeholder="Ex: CP-001"></div>
@@ -530,7 +487,7 @@ tbody tr:hover td{background:var(--bg3);}
         <span class="spinner" id="save-spinner"></span>
         <span id="save-label">REGISTRAR RESULTADO</span>
       </button>
-      <button class="btn-ghost" onclick="clearForm()">Limpar formulário</button>
+      <button class="btn-ghost" onclick="clearForm()">Limpar / Cancelar edição</button>
     </div>
 
     <!-- TABLE -->
@@ -543,31 +500,33 @@ tbody tr:hover td{background:var(--bg3);}
           <button class="tool-btn print-btn" onclick="openModal()">⎙ Laudo</button>
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th><th>Data</th><th>Dia</th><th>Hora</th><th>Tipo</th>
-            <th>Inspetor</th><th>Amostra</th><th>Unid.</th>
-            <th>Espec.</th><th>Encontrado</th><th>Desvio</th><th>Status</th><th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbl-body"><tr><td class="empty-td" colspan="13">Conectando à nuvem...</td></tr></tbody>
-      </table>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Data</th><th>Dia</th><th>Hora</th><th>Tipo</th>
+              <th>Inspetor</th><th>Amostra</th><th>Unid.</th>
+              <th>Espec.</th><th>Encontrado</th><th>Desvio</th><th>Status</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"><tr><td class="empty-td" colspan="13">Conectando à nuvem...</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ ABA 2: ANÁLISE ═══ -->
+<!-- ═══ ABA 2: ANÁLISE & GRÁFICOS ═══ -->
 <div class="tab-pane" id="pane-analise">
   <div class="analise-layout">
 
-    <!-- Filtro para os gráficos -->
+    <!-- Filtro -->
     <div class="filter-bar no-print">
       <div class="field"><label class="field-label">Tipo</label>
         <select id="an-type"><option value="">Todos</option><option value="comp">Compressão</option><option value="trac">Tração</option><option value="burst">Estouro</option></select>
       </div>
-      <div class="field"><label class="field-label">Inspetor</label><input type="text" id="an-inspector" placeholder="Filtrar por inspetor"></div>
-      <div class="field"><label class="field-label">Amostra</label><input type="text" id="an-sample" placeholder="Filtrar por amostra"></div>
+      <div class="field"><label class="field-label">Inspetor</label><input type="text" id="an-inspector" placeholder="Nome..."></div>
+      <div class="field"><label class="field-label">Amostra</label><input type="text" id="an-sample" placeholder="Código..."></div>
       <div class="field"><label class="field-label">Data início</label><input type="date" id="an-date-from"></div>
       <div class="field"><label class="field-label">Data fim</label><input type="date" id="an-date-to"></div>
       <div class="field"><label class="field-label">Status</label>
@@ -578,146 +537,141 @@ tbody tr:hover td{background:var(--bg3);}
       <span class="filter-info" id="filter-info">— registros</span>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats (6 cards) -->
     <div class="stat-grid">
-      <div class="stat-card" style="--sc-color:var(--accent)"><div class="stat-label">Filtrados</div><div class="stat-val" id="an-total">—</div><div class="stat-sub">seleção atual</div></div>
+      <div class="stat-card" style="--sc-color:var(--accent)"><div class="stat-label">Filtrados</div><div class="stat-val" id="an-total">—</div><div class="stat-sub">seleção</div></div>
       <div class="stat-card" style="--sc-color:var(--success)"><div class="stat-label">Aprovados</div><div class="stat-val" id="an-ok">—</div><div class="stat-sub" id="an-ok-pct">—%</div></div>
       <div class="stat-card" style="--sc-color:var(--danger)"><div class="stat-label">Reprovados</div><div class="stat-val" id="an-fail">—</div><div class="stat-sub" id="an-fail-pct">—%</div></div>
       <div class="stat-card" style="--sc-color:var(--warn)"><div class="stat-label">Desvio médio</div><div class="stat-val" id="an-avg">—</div><div class="stat-sub">% médio</div></div>
       <div class="stat-card" style="--sc-color:var(--purple)"><div class="stat-label">Desvio máx.</div><div class="stat-val" id="an-max">—</div><div class="stat-sub">% máximo</div></div>
+      <div class="stat-card" style="--sc-color:var(--trac)"><div class="stat-label">Desvio mín.</div><div class="stat-val" id="an-min">—</div><div class="stat-sub">% mínimo</div></div>
     </div>
 
-    <!-- Gráficos -->
+    <!-- ROW 1: Linha histórico + Rosca -->
+    <div class="section-label">Histórico &amp; Distribuição</div>
     <div class="charts-grid-2">
-      <div class="chart-panel">
-        <div class="chart-head"><span class="chart-title">Histórico — Especificado vs Encontrado</span><span class="chart-tag" id="an-chart-count">—</span></div>
-        <div style="position:relative;height:200px"><canvas id="anLineChart"></canvas></div>
+      <div class="chart-panel tall">
+        <div class="chart-head"><span class="chart-title">Especificado vs Encontrado</span><span class="chart-tag" id="an-chart-count">—</span></div>
+        <div style="position:relative;height:220px"><canvas id="anLineChart"></canvas></div>
       </div>
-      <div class="chart-panel">
-        <div class="chart-head"><span class="chart-title">Distribuição de resultados</span><span class="chart-tag">Aprovado / Reprovado</span></div>
-        <div style="position:relative;height:200px"><canvas id="anDoughnutChart"></canvas></div>
+      <div class="chart-panel tall">
+        <div class="chart-head"><span class="chart-title">Resultado Geral</span><span class="chart-tag">Aprovado / Reprovado</span></div>
+        <div style="position:relative;height:220px"><canvas id="anDoughnutChart"></canvas></div>
       </div>
     </div>
+
+    <!-- ROW 2: Desvio + Tipo + Aprovação -->
+    <div class="section-label">Desvio &amp; Composição</div>
     <div class="charts-grid-3">
       <div class="chart-panel">
-        <div class="chart-head"><span class="chart-title">Desvio % por ensaio</span><span class="chart-tag">Últimos 20</span></div>
-        <div style="position:relative;height:160px"><canvas id="anDeviationChart"></canvas></div>
+        <div class="chart-head"><span class="chart-title">Desvio % por ensaio</span><span class="chart-tag">Últimos 30</span></div>
+        <div style="position:relative;height:180px"><canvas id="anDeviationChart"></canvas></div>
       </div>
       <div class="chart-panel">
         <div class="chart-head"><span class="chart-title">Comp. / Tração / Estouro</span><span class="chart-tag">Contagem</span></div>
-        <div style="position:relative;height:160px"><canvas id="anTypeChart"></canvas></div>
+        <div style="position:relative;height:180px"><canvas id="anTypeChart"></canvas></div>
       </div>
       <div class="chart-panel">
         <div class="chart-head"><span class="chart-title">Evolução da aprovação</span><span class="chart-tag">% acumulado</span></div>
-        <div style="position:relative;height:160px"><canvas id="anApprovalChart"></canvas></div>
+        <div style="position:relative;height:180px"><canvas id="anApprovalChart"></canvas></div>
       </div>
     </div>
 
-    <!-- ══ PAINEL DE IMPRESSÃO COM FILTROS PRÓPRIOS ══ -->
-    <div class="print-panel no-print">
-
-      <!-- Cabeçalho -->
-      <div class="pp-header">
-        <div class="pp-title">⎙ Visualização &amp; Impressão em Lote</div>
-        <div class="pp-result-info">
-          <span id="pp-result-text">Nenhum filtro ativo</span>
-          <span class="pp-badge" id="pp-result-badge">0 ensaios</span>
-        </div>
+    <!-- ROW 3: Radar + Scatter + Histograma -->
+    <div class="section-label">Análise Avançada</div>
+    <div class="charts-grid-3">
+      <div class="chart-panel">
+        <div class="chart-head"><span class="chart-title">Dispersão Espec. × Encontrado</span><span class="chart-tag">Scatter</span></div>
+        <div style="position:relative;height:200px"><canvas id="anScatterChart"></canvas></div>
       </div>
-
-      <!-- Filtros do painel de impressão -->
-      <div class="pp-filters">
-        <div class="field">
-          <label class="field-label">Tipo de ensaio</label>
-          <select id="pp-type">
-            <option value="">Todos os tipos</option>
-            <option value="comp">▼ Compressão</option>
-            <option value="trac">▲ Tração</option>
-            <option value="burst">💥 Estouro</option>
-          </select>
-        </div>
-        <div class="field">
-          <label class="field-label">Data início</label>
-          <input type="date" id="pp-date-from">
-        </div>
-        <div class="field">
-          <label class="field-label">Data fim</label>
-          <input type="date" id="pp-date-to">
-        </div>
-        <div class="field">
-          <label class="field-label">Inspetor</label>
-          <input type="text" id="pp-inspector" placeholder="Nome ou parte...">
-        </div>
-        <div class="field">
-          <label class="field-label">Amostra</label>
-          <input type="text" id="pp-sample" placeholder="Cód. ou parte...">
-        </div>
-        <div class="field">
-          <label class="field-label">Status</label>
-          <select id="pp-status">
-            <option value="">Todos</option>
-            <option value="Aprovado">✓ Aprovado</option>
-            <option value="Reprovado">✗ Reprovado</option>
-          </select>
-        </div>
-        <button class="btn-apply" onclick="applyPpFilter()" style="padding:8px 16px">FILTRAR</button>
-        <button class="btn-reset-filter" onclick="resetPpFilter()">✕ LIMPAR</button>
+      <div class="chart-panel">
+        <div class="chart-head"><span class="chart-title">Histograma de Desvios</span><span class="chart-tag">Distribuição</span></div>
+        <div style="position:relative;height:200px"><canvas id="anHistChart"></canvas></div>
       </div>
-
-      <!-- Chips dos filtros ativos -->
-      <div class="pp-chips" id="pp-chips">
-        <span class="chips-empty">Nenhum filtro ativo — exibindo todos os registros</span>
+      <div class="chart-panel">
+        <div class="chart-head"><span class="chart-title">Resultados por Inspetor</span><span class="chart-tag">Aprovação %</span></div>
+        <div style="position:relative;height:200px"><canvas id="anInspectorChart"></canvas></div>
       </div>
+    </div>
 
-      <!-- Barra de seleção -->
-      <div class="pp-select-bar">
-        <button class="sel-btn sel-btn-accent" onclick="selectAllPrint()">✓ Todos</button>
-        <button class="sel-btn" onclick="selectNonePrint()">✗ Nenhum</button>
-        <button class="sel-btn sel-btn-accent" onclick="selectFilteredPrint()">◈ Filtrados</button>
-        <span class="sel-count" id="select-count">0 selecionados</span>
+    <!-- ROW 4: Linha de desvio acumulado + Barras por amostra -->
+    <div class="section-label">Tendência &amp; Amostras</div>
+    <div class="charts-grid-2">
+      <div class="chart-panel">
+        <div class="chart-head"><span class="chart-title">Tendência do Desvio Médio</span><span class="chart-tag">Média móvel 5 pontos</span></div>
+        <div style="position:relative;height:200px"><canvas id="anTrendChart"></canvas></div>
       </div>
-
-      <!-- Tabela seleccionável -->
-      <div class="print-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th class="chk-col"><input type="checkbox" class="row-checkbox" id="chk-all" onchange="toggleAllChk(this)"></th>
-              <th>#</th><th>Data</th><th>Dia</th><th>Tipo</th><th>Inspetor</th>
-              <th>Amostra</th><th>Unid.</th><th>Espec.</th><th>Encontrado</th><th>Desvio</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="print-tbl-body"><tr><td class="empty-td" colspan="12">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-
-      <!-- Rodapé: opções de laudo + botões -->
-      <div class="pp-footer">
-        <div class="field"><label class="field-label">Empresa / Laboratório</label><input type="text" id="pr-empresa" value="Röchling"></div>
-        <div class="field"><label class="field-label">Nº do laudo base</label><input type="text" id="pr-laudo" placeholder="ROC-2025-001"></div>
-        <div class="field"><label class="field-label">Responsável técnico</label><input type="text" id="pr-resp" placeholder="Eng. Nome Sobrenome"></div>
-        <div class="field"><label class="field-label">Modo</label>
-          <select id="pr-mode">
-            <option value="all">1 laudo com todos selecionados</option>
-            <option value="individual">1 laudo por ensaio (lote)</option>
-          </select>
-        </div>
-        <div class="field"><label class="field-label">Observações</label><input type="text" id="pr-obs" placeholder="Normas, condições, equipamentos..."></div>
-        <button class="btn-visualize" id="btn-visualize" onclick="visualizeSelected()" disabled>◉ VISUALIZAR</button>
-        <button class="btn-print-sel" id="btn-print-sel" onclick="printSelected()" disabled>⎙ IMPRIMIR</button>
+      <div class="chart-panel">
+        <div class="chart-head"><span class="chart-title">Ensaios por Amostra</span><span class="chart-tag">Top 10</span></div>
+        <div style="position:relative;height:200px"><canvas id="anSampleChart"></canvas></div>
       </div>
     </div>
 
   </div>
 </div>
 
+<!-- ═══ ABA 3: IMPRESSÃO EM LOTE ═══ -->
+<div class="tab-pane" id="pane-impressao">
+  <div class="print-panel no-print">
+    <div class="pp-header">
+      <div class="pp-title">⎙ Visualização &amp; Impressão em Lote</div>
+      <div class="pp-result-info">
+        <span id="pp-result-text">Nenhum filtro ativo</span>
+        <span class="pp-badge" id="pp-result-badge">0 ensaios</span>
+      </div>
+    </div>
+    <div class="pp-filters">
+      <div class="field"><label class="field-label">Tipo</label>
+        <select id="pp-type"><option value="">Todos</option><option value="comp">▼ Compressão</option><option value="trac">▲ Tração</option><option value="burst">💥 Estouro</option></select>
+      </div>
+      <div class="field"><label class="field-label">Data início</label><input type="date" id="pp-date-from"></div>
+      <div class="field"><label class="field-label">Data fim</label><input type="date" id="pp-date-to"></div>
+      <div class="field"><label class="field-label">Inspetor</label><input type="text" id="pp-inspector" placeholder="Nome..."></div>
+      <div class="field"><label class="field-label">Amostra</label><input type="text" id="pp-sample" placeholder="Cód..."></div>
+      <div class="field"><label class="field-label">Status</label>
+        <select id="pp-status"><option value="">Todos</option><option value="Aprovado">✓ Aprovado</option><option value="Reprovado">✗ Reprovado</option></select>
+      </div>
+      <button class="btn-apply" onclick="applyPpFilter()" style="padding:8px 16px">FILTRAR</button>
+      <button class="btn-reset-filter" onclick="resetPpFilter()">✕</button>
+    </div>
+    <div class="pp-chips" id="pp-chips"><span class="chips-empty">Nenhum filtro ativo</span></div>
+    <div class="pp-select-bar">
+      <button class="sel-btn sel-btn-accent" onclick="selectAllPrint()">✓ Todos</button>
+      <button class="sel-btn" onclick="selectNonePrint()">✗ Nenhum</button>
+      <button class="sel-btn sel-btn-accent" onclick="selectFilteredPrint()">◈ Filtrados</button>
+      <span class="sel-count" id="select-count">0 selecionados</span>
+    </div>
+    <div class="print-table-wrap">
+      <table>
+        <thead><tr>
+          <th class="chk-col"><input type="checkbox" class="row-checkbox" id="chk-all" onchange="toggleAllChk(this)"></th>
+          <th>#</th><th>Data</th><th>Dia</th><th>Tipo</th><th>Inspetor</th>
+          <th>Amostra</th><th>Unid.</th><th>Espec.</th><th>Encontrado</th><th>Desvio</th><th>Status</th>
+        </tr></thead>
+        <tbody id="print-tbl-body"><tr><td class="empty-td" colspan="12">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pp-footer">
+      <div class="field"><label class="field-label">Empresa</label><input type="text" id="pr-empresa" value="Röchling"></div>
+      <div class="field"><label class="field-label">Nº do laudo</label><input type="text" id="pr-laudo" placeholder="ROC-2025-001"></div>
+      <div class="field"><label class="field-label">Responsável técnico</label><input type="text" id="pr-resp" placeholder="Eng. Nome Sobrenome"></div>
+      <div class="field"><label class="field-label">Modo</label>
+        <select id="pr-mode"><option value="all">1 laudo com todos selecionados</option><option value="individual">1 laudo por ensaio</option></select>
+      </div>
+      <div class="field"><label class="field-label">Observações</label><input type="text" id="pr-obs" placeholder="Normas, condições..."></div>
+      <button class="btn-visualize" id="btn-visualize" onclick="visualizeSelected()" disabled>◉ VISUALIZAR</button>
+      <button class="btn-print-sel" id="btn-print-sel" onclick="printSelected()" disabled>⎙ IMPRIMIR</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app -->
 
-<!-- MODAL LAUDO RÁPIDO (aba 1) -->
+<!-- MODAL LAUDO RÁPIDO -->
 <div class="overlay no-print" id="modal">
   <div class="modal">
     <div class="modal-title">Laudo Rápido</div>
-    <div class="modal-sub">Filtro para o laudo desta amostra.</div>
+    <div class="modal-sub">Filtro para impressão direta.</div>
     <div class="modal-row">
       <div class="field"><label class="field-label">Empresa</label><input type="text" id="p-empresa" value="Röchling"></div>
       <div class="field"><label class="field-label">Nº do laudo</label><input type="text" id="p-laudo" placeholder="ROC-2025-001"></div>
@@ -730,10 +684,59 @@ tbody tr:hover td{background:var(--bg3);}
       <div class="field"><label class="field-label">Data início</label><input type="date" id="p-date-from"></div>
       <div class="field"><label class="field-label">Data fim</label><input type="date" id="p-date-to"></div>
     </div>
-    <div class="field"><label class="field-label">Observações</label><textarea id="p-obs" placeholder="Condições do laboratório, normas..."></textarea></div>
+    <div class="field"><label class="field-label">Observações</label><textarea id="p-obs" placeholder="Condições, normas..."></textarea></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-print-modal" onclick="printReport()">⎙ GERAR E IMPRIMIR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIÇÃO -->
+<div class="overlay no-print" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--edit)">✏ Editar Ensaio</div>
+    <div class="modal-sub" id="edit-modal-sub">Amostra: — · ID: —</div>
+    <div class="modal-row">
+      <div class="field"><label class="field-label">Tipo de ensaio</label>
+        <select id="em-type">
+          <option value="comp">▼ Compressão</option>
+          <option value="trac">▲ Tração</option>
+          <option value="burst">💥 Estouro</option>
+        </select>
+      </div>
+      <div class="field"><label class="field-label">Unidade</label>
+        <select id="em-unit">
+          <option value="kN">kN</option><option value="MPa">MPa</option>
+          <option value="kgf">kgf</option><option value="tf">tf</option>
+          <option value="N">N</option><option value="mm">mm</option>
+          <option value="psi">psi</option><option value="bar">bar</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="field"><label class="field-label">Inspetor *</label><input type="text" id="em-inspector" placeholder="Nome completo"></div>
+      <div class="field"><label class="field-label">Cód. amostra *</label><input type="text" id="em-sample" placeholder="Ex: CP-001"></div>
+    </div>
+    <div class="modal-row-3">
+      <div class="field"><label class="field-label">Data (AAAA-MM-DD)</label><input type="date" id="em-date"></div>
+      <div class="field"><label class="field-label">Hora (HH:MM)</label><input type="time" id="em-time"></div>
+      <div class="field"><label class="field-label">Dia semana</label>
+        <select id="em-weekday"><option>Dom</option><option>Seg</option><option>Ter</option><option>Qua</option><option>Qui</option><option>Sex</option><option>Sáb</option></select>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="field"><label class="field-label">Valor especificado *</label><input type="number" id="em-spec" step="0.01" oninput="calcEditModal()"></div>
+      <div class="field"><label class="field-label">Valor encontrado *</label><input type="number" id="em-found" step="0.01" oninput="calcEditModal()"></div>
+    </div>
+    <div class="result-box" id="em-result-box" style="margin-bottom:10px">
+      <div><div class="mcard-label" style="margin-bottom:3px">Resultado</div><div class="result-stress" id="em-live-found">—</div></div>
+      <div id="em-live-badge" class="status-badge s-idle">—</div>
+    </div>
+    <div class="field"><label class="field-label">Observações</label><textarea id="em-notes" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn-save-modal" onclick="saveEdit()">💾 SALVAR ALTERAÇÕES</button>
     </div>
   </div>
 </div>
@@ -753,7 +756,7 @@ tbody tr:hover td{background:var(--bg3);}
 <!-- PREVIEW OVERLAY -->
 <div class="preview-overlay no-print" id="preview-overlay">
   <div class="preview-bar">
-    <span class="preview-title" id="preview-title">⎙ Pré-visualização do laudo</span>
+    <span class="preview-title" id="preview-title">⎙ Pré-visualização</span>
     <div class="preview-actions">
       <span id="preview-info" style="font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.06em;margin-right:8px"></span>
       <button class="btn-close-preview" onclick="closePreview()">✕ Fechar</button>
@@ -775,16 +778,17 @@ function toggleTheme(){
   document.documentElement.setAttribute('data-theme',n);
   localStorage.setItem('roch-theme',n);
   document.getElementById('theme-label').textContent=n==='dark'?'NOITE':'DIA';
-  if(chartsReady)setTimeout(()=>{Chart.defaults.color=n==='dark'?'#4e5a70':'#8090a8';updateAnalise();},50);
+  if(chartsReady)setTimeout(()=>{rebuildCharts();},50);
 }
 
 // ── STATE ──
 let currentType='comp';
-let anLineChart,anDoughnutChart,anDeviationChart,anTypeChart,anApprovalChart;
+let editingId=null;
 let chartsReady=false;
-let filteredRecords=null;   // gráficos
-let ppFiltered=null;        // painel de impressão
-let currentPrintData=null;  // cache para imprimir
+let filteredRecords=null;
+let ppFiltered=null;
+let currentPrintData=null;
+let charts={};
 
 // ── TABS ──
 function switchTab(tab){
@@ -793,6 +797,7 @@ function switchTab(tab){
   document.getElementById('pane-'+tab).classList.add('active');
   document.getElementById('tab-'+tab).classList.add('active');
   if(tab==='analise'){if(chartsReady)updateAnalise();else initAnaliseCharts();}
+  if(tab==='impressao'){renderPrintTable();}
 }
 
 // ── CLOCK ──
@@ -813,9 +818,11 @@ window._onDataReady=function(){
   updateCloudBar(true,records.length);
   updateMetrics(records);
   renderTable();
-  renderPrintTable();
   updateTabCounts(records);
   if(chartsReady)updateAnalise();
+  // update print tab if active
+  const printPaneActive=document.getElementById('pane-impressao')?.classList.contains('active');
+  if(printPaneActive)renderPrintTable();
 };
 window._onFirestoreError=function(msg){
   document.getElementById('cloud-bar').className='cloud-bar error';
@@ -826,7 +833,11 @@ function updateCloudBar(ok,count){
   document.getElementById('cloud-status').textContent=ok?'✓ Firebase conectado — tempo real':'Conectando...';
   document.getElementById('cloud-count').textContent=ok?count+' REGISTRO'+(count!==1?'S':'')+' NA NUVEM':'';
 }
-function updateTabCounts(r){document.getElementById('tab-count-ensaios').textContent=r.length;document.getElementById('tab-count-analise').textContent=r.length;}
+function updateTabCounts(r){
+  document.getElementById('tab-count-ensaios').textContent=r.length;
+  document.getElementById('tab-count-analise').textContent=r.length;
+  document.getElementById('tab-count-impressao').textContent=r.length;
+}
 
 // ── DATETIME ──
 function toggleDt(){
@@ -848,13 +859,13 @@ function setType(t){
   if(isBurst)document.getElementById('f-unit').value='bar';
   document.getElementById('label-spec').textContent=isBurst?'Pressão especificada (bar) *':'Valor especificado *';
   document.getElementById('label-found').textContent=isBurst?'Pressão de estouro (bar) *':'Valor encontrado *';
-  const sw=document.getElementById('field-spec-wrap'), fw=document.getElementById('field-found-wrap');
+  const sw=document.getElementById('field-spec-wrap'),fw=document.getElementById('field-found-wrap');
   sw.className=isBurst?'field field-hi-burst':'field field-hi';
   fw.className=isBurst?'field field-hi-burst':'field field-hi found';
   liveCalc();
 }
 
-// ── LIVE CALC ──
+// ── LIVE CALC (form principal) ──
 function liveCalc(){
   const spec=parseFloat(document.getElementById('f-spec').value);
   const found=parseFloat(document.getElementById('f-found').value);
@@ -884,6 +895,24 @@ function liveCalc(){
   const sl=currentType==='burst'?'Pressão de estouro':'Encontrado',sp=currentType==='burst'?'Pressão especificada':'Especificado';
   const stl=ok?(currentType==='burst'?'✓ Estouro acima do especificado':'✓ Dentro do especificado'):(currentType==='burst'?'✗ Estouro abaixo do especificado':'✗ Abaixo do especificado');
   document.getElementById('prog-label').textContent=sl+': '+found.toFixed(2)+' '+unit+'  ·  '+sp+': '+spec.toFixed(2)+' '+unit+'  ·  '+stl;
+}
+
+// ── LIVE CALC EDIT MODAL ──
+function calcEditModal(){
+  const spec=parseFloat(document.getElementById('em-spec').value);
+  const found=parseFloat(document.getElementById('em-found').value);
+  const type=document.getElementById('em-type').value;
+  const unit=type==='burst'?'bar':document.getElementById('em-unit').value;
+  if(isNaN(spec)||isNaN(found)){
+    document.getElementById('em-live-badge').textContent='—';
+    document.getElementById('em-live-badge').className='status-badge s-idle';
+    document.getElementById('em-live-found').textContent='—';
+    return;
+  }
+  const ok=found>=spec;
+  document.getElementById('em-live-found').textContent=found.toFixed(2)+' '+unit;
+  if(type==='burst'){document.getElementById('em-live-badge').textContent=ok?'ESTOURO ✓':'ABAIXO ESPEC.';document.getElementById('em-live-badge').className='status-badge '+(ok?'s-burst-ok':'s-burst-fail');}
+  else{document.getElementById('em-live-badge').textContent=ok?'APROVADO':'REPROVADO';document.getElementById('em-live-badge').className='status-badge '+(ok?'s-ok':'s-fail');}
 }
 
 // ── SAVE ──
@@ -924,10 +953,67 @@ async function saveRecord(){
       createdAt:serverTimestamp(),date:recDate,dateFull:recDateFull,time:recTime,weekday:recWeekday,
       type:currentType,inspector,sample,spec,found,unit,diff,desvio,status,notes
     });
-    const msg=currentType==='burst'?(status==='Aprovado'?'💥 Estouro aprovado — salvo!':'⚠ Estouro abaixo do especificado — salvo.'):(status==='Aprovado'?'✓ Aprovado — salvo!':'✗ Reprovado — salvo.');
-    showToast(msg);clearForm();
+    showToast(status==='Aprovado'?'✓ Aprovado — salvo!':'✗ Reprovado — salvo.');
+    clearForm();
   }catch(e){showToast('⚠ Erro: '+e.message);}
   finally{btn.disabled=false;sp.style.display='none';lbl.textContent='REGISTRAR RESULTADO';}
+}
+
+// ── EDIT ── 
+function openEditModal(fid){
+  const r=(window._records||[]).find(x=>x.firestoreId===fid);
+  if(!r)return;
+  editingId=fid;
+  document.getElementById('edit-modal-sub').textContent='Amostra: '+r.sample+' · ID: '+fid.slice(0,8)+'...';
+  document.getElementById('em-type').value=r.type||'comp';
+  document.getElementById('em-unit').value=r.unit||'kN';
+  document.getElementById('em-inspector').value=r.inspector||'';
+  document.getElementById('em-sample').value=r.sample||'';
+  document.getElementById('em-spec').value=r.spec||'';
+  document.getElementById('em-found').value=r.found||'';
+  document.getElementById('em-notes').value=r.notes||'';
+  // date / time
+  if(r.dateFull){document.getElementById('em-date').value=r.dateFull;}
+  if(r.time){
+    // convert "HH:MM:SS" or "HH:MM" to "HH:MM"
+    const tp=r.time.slice(0,5);
+    document.getElementById('em-time').value=tp;
+  }
+  if(r.weekday){document.getElementById('em-weekday').value=r.weekday;}
+  calcEditModal();
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;}
+
+async function saveEdit(){
+  if(!editingId){showToast('Nenhum registro em edição.');return;}
+  const type=document.getElementById('em-type').value;
+  const unit=type==='burst'?'bar':document.getElementById('em-unit').value;
+  const inspector=document.getElementById('em-inspector').value.trim();
+  const sample=document.getElementById('em-sample').value.trim();
+  const spec=parseFloat(document.getElementById('em-spec').value);
+  const found=parseFloat(document.getElementById('em-found').value);
+  const notes=document.getElementById('em-notes').value.trim();
+  const dateFull=document.getElementById('em-date').value;
+  const timeVal=document.getElementById('em-time').value;
+  const weekday=document.getElementById('em-weekday').value;
+  if(!inspector||!sample||isNaN(spec)||isNaN(found)){showToast('⚠ Preencha todos os campos obrigatórios.');return;}
+  const diff=found-spec,desvio=spec!==0?(diff/spec)*100:0,status=found>=spec?'Aprovado':'Reprovado';
+  let date='',time='';
+  if(dateFull){const[y,m,d]=dateFull.split('-');date=d+'/'+m+'/'+y;}
+  if(timeVal){time=timeVal;}
+  try{
+    const{doc,updateDoc}=window._fbFns;
+    await updateDoc(doc(window._db,window._col,editingId),{
+      type,unit,inspector,sample,spec,found,notes,diff,desvio,status,
+      ...(date?{date}:{}),
+      ...(dateFull?{dateFull}:{}),
+      ...(time?{time}:{}),
+      ...(weekday?{weekday}:{})
+    });
+    showToast('✓ Ensaio atualizado!');
+    closeEditModal();
+  }catch(e){showToast('⚠ Erro: '+e.message);}
 }
 
 // ── DELETE ──
@@ -950,10 +1036,13 @@ async function clearAllData(){
 // ── METRICS ──
 function updateMetrics(records){
   const n=records.length,ok=records.filter(r=>r.status==='Aprovado').length,fail=n-ok,pct=n>0?Math.round(ok/n*100):0;
+  const devs=records.map(r=>+(+r.desvio));
+  const avg=n?(devs.reduce((a,b)=>a+b,0)/n).toFixed(1)+'%':'—';
   document.getElementById('m-total').textContent=n;
   document.getElementById('m-ok').textContent=ok;
   document.getElementById('m-fail').textContent=fail;
   document.getElementById('m-pct').textContent=pct+'%';
+  document.getElementById('m-avg').textContent=avg;
   document.getElementById('m-ok-pct').textContent=(n?Math.round(ok/n*100):0)+'% do total';
   document.getElementById('m-fail-pct').textContent=(n?Math.round(fail/n*100):0)+'% do total';
 }
@@ -962,8 +1051,9 @@ function updateMetrics(records){
 function getWd(r){if(r.weekday)return r.weekday;if(r.dateFull){const d=new Date(r.dateFull+'T12:00:00');return WEEKDAYS_PT[d.getDay()];}return '—';}
 function typeTag(t){if(t==='comp')return'<span class="tag-comp">COMP.</span>';if(t==='trac')return'<span class="tag-trac">TRAÇÃO</span>';if(t==='burst')return'<span class="tag-burst">💥 ESTOURO</span>';return t||'—';}
 function typeLabel(t){if(t==='comp')return'Compressão';if(t==='trac')return'Tração';if(t==='burst')return'Estouro';return t||'—';}
+function isDark(){return document.documentElement.getAttribute('data-theme')!=='light';}
 
-// ── TABLE (aba 1) ──
+// ── TABLE ──
 function renderTable(){
   const records=window._records||[];
   const q=document.getElementById('tbl-search').value.toLowerCase();
@@ -974,7 +1064,8 @@ function renderTable(){
   tbody.innerHTML=filtered.map((r,i)=>{
     const sc=r.status==='Aprovado'?'res-ok':'res-fail';
     const sign=(r.diff||0)>=0?'+':'';
-    return`<tr>
+    const isEditing=editingId===r.firestoreId;
+    return`<tr class="${isEditing?'editing-row':''}">
       <td class="td-mono">${i+1}</td>
       <td><span class="td-date-main">${r.date||'—'}</span></td>
       <td><span class="td-date-wd">${getWd(r)}</span></td>
@@ -988,14 +1079,15 @@ function renderTable(){
       <td class="td-mono" style="color:${r.status==='Aprovado'?'var(--success)':'var(--danger)'}">${sign}${(+r.desvio).toFixed(1)}%</td>
       <td class="${sc}">${r.status}</td>
       <td style="white-space:nowrap">
-        <button class="print-row-btn" onclick='printSingle(${JSON.stringify(r.firestoreId)})'>⎙</button>
-        <button class="del-btn" onclick='deleteRecord(${JSON.stringify(r.firestoreId)})'>✕</button>
+        <button class="print-row-btn" onclick='printSingle(${JSON.stringify(r.firestoreId)})' title="Imprimir laudo">⎙</button>
+        <button class="edit-btn" onclick='openEditModal(${JSON.stringify(r.firestoreId)})' title="Editar">✏</button>
+        <button class="del-btn" onclick='deleteRecord(${JSON.stringify(r.firestoreId)})' title="Excluir">✕</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-// ── ANÁLISE FILTER (gráficos) ──
+// ── ANÁLISE FILTER ──
 function getFilteredForAnalise(){
   let records=[...(window._records||[])].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
   const type=document.getElementById('an-type').value;
@@ -1019,76 +1111,239 @@ function resetFilter(){
   filteredRecords=null;updateAnalise();
 }
 
+// ── UPDATE ANÁLISE ──
 function updateAnalise(){
-  const records=filteredRecords!==null?filteredRecords:(window._records||[]).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  const records=filteredRecords!==null?filteredRecords:[...(window._records||[])].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
   const n=records.length,ok=records.filter(r=>r.status==='Aprovado').length,fail=n-ok;
-  const devs=records.map(r=>+(+r.desvio).toFixed(1));
+  const devs=records.map(r=>+(+r.desvio).toFixed(2));
   document.getElementById('an-total').textContent=n;
   document.getElementById('an-ok').textContent=ok;
   document.getElementById('an-fail').textContent=fail;
   document.getElementById('an-avg').textContent=n?(devs.reduce((a,b)=>a+b,0)/n).toFixed(1)+'%':'—';
-  document.getElementById('an-max').textContent=n?Math.max(...devs.map(Math.abs)).toFixed(1)+'%':'—';
+  const absDev=devs.map(Math.abs);
+  document.getElementById('an-max').textContent=n?Math.max(...absDev).toFixed(1)+'%':'—';
+  document.getElementById('an-min').textContent=n?Math.min(...absDev).toFixed(1)+'%':'—';
   document.getElementById('an-ok-pct').textContent=n?Math.round(ok/n*100)+'% aprovação':'—';
   document.getElementById('an-fail-pct').textContent=n?Math.round(fail/n*100)+'% reprovado':'—';
   document.getElementById('filter-info').textContent=n+' registro'+(n!==1?'s':'')+' exibido'+(n!==1?'s':'');
   document.getElementById('an-chart-count').textContent=n+' ensaio'+(n!==1?'s':'');
   if(!chartsReady)return;
-  anLineChart.data.labels=records.map(r=>r.sample);
-  anLineChart.data.datasets[0].data=records.map(r=>r.spec);
-  anLineChart.data.datasets[1].data=records.map(r=>r.found);
-  anLineChart.update();
-  anDoughnutChart.data.datasets[0].data=[ok,fail];anDoughnutChart.update();
-  const l20=records.slice(-20);
-  anDeviationChart.data.labels=l20.map(r=>r.sample);
-  anDeviationChart.data.datasets[0].data=l20.map(r=>parseFloat((+r.desvio).toFixed(1)));
-  anDeviationChart.data.datasets[0].backgroundColor=l20.map(r=>r.status==='Aprovado'?'rgba(0,229,153,.2)':'rgba(255,71,87,.2)');
-  anDeviationChart.data.datasets[0].borderColor=l20.map(r=>r.status==='Aprovado'?'#00e599':'#ff4757');
-  anDeviationChart.update();
-  anTypeChart.data.datasets[0].data=[records.filter(r=>r.type==='comp').length,records.filter(r=>r.type==='trac').length,records.filter(r=>r.type==='burst').length];
-  anTypeChart.update();
+
+  const tc=isDark()?'#4e5a70':'#8090a8';
+  const gc=isDark()?'rgba(255,255,255,.03)':'rgba(0,0,0,.04)';
+
+  // 1. Line chart
+  charts.line.data.labels=records.map(r=>r.sample);
+  charts.line.data.datasets[0].data=records.map(r=>r.spec);
+  charts.line.data.datasets[1].data=records.map(r=>r.found);
+  charts.line.update();
+
+  // 2. Doughnut
+  charts.doughnut.data.datasets[0].data=[ok,fail];
+  charts.doughnut.update();
+
+  // 3. Deviation bars (last 30)
+  const l30=records.slice(-30);
+  charts.deviation.data.labels=l30.map(r=>r.sample);
+  charts.deviation.data.datasets[0].data=l30.map(r=>parseFloat((+r.desvio).toFixed(1)));
+  charts.deviation.data.datasets[0].backgroundColor=l30.map(r=>r.status==='Aprovado'?'rgba(0,229,153,.25)':'rgba(255,71,87,.25)');
+  charts.deviation.data.datasets[0].borderColor=l30.map(r=>r.status==='Aprovado'?'#00e599':'#ff4757');
+  charts.deviation.update();
+
+  // 4. Type
+  charts.type.data.datasets[0].data=[records.filter(r=>r.type==='comp').length,records.filter(r=>r.type==='trac').length,records.filter(r=>r.type==='burst').length];
+  charts.type.update();
+
+  // 5. Cumulative approval
   let cumOk=0;
-  anApprovalChart.data.labels=records.map(r=>r.sample);
-  anApprovalChart.data.datasets[0].data=records.map((r,i)=>{if(r.status==='Aprovado')cumOk++;return+((cumOk/(i+1))*100).toFixed(1);});
-  anApprovalChart.update();
+  charts.approval.data.labels=records.map(r=>r.sample);
+  charts.approval.data.datasets[0].data=records.map((r,i)=>{if(r.status==='Aprovado')cumOk++;return+((cumOk/(i+1))*100).toFixed(1);});
+  charts.approval.update();
+
+  // 6. Scatter
+  charts.scatter.data.datasets[0].data=records.filter(r=>r.status==='Aprovado').map(r=>({x:+r.spec,y:+r.found}));
+  charts.scatter.data.datasets[1].data=records.filter(r=>r.status==='Reprovado').map(r=>({x:+r.spec,y:+r.found}));
+  charts.scatter.update();
+
+  // 7. Histogram of desvio
+  buildHistogram(records);
+
+  // 8. Inspector bar
+  buildInspectorChart(records);
+
+  // 9. Trend chart (moving average)
+  buildTrendChart(records);
+
+  // 10. Sample count chart
+  buildSampleChart(records);
+}
+
+function buildHistogram(records){
+  if(!records.length){charts.hist.data.labels=[];charts.hist.data.datasets[0].data=[];charts.hist.update();return;}
+  const devs=records.map(r=>+(+r.desvio).toFixed(1));
+  const min=Math.floor(Math.min(...devs))-1,max=Math.ceil(Math.max(...devs))+1;
+  const bins=10,step=(max-min)/bins;
+  const labels=[],counts=[];
+  for(let i=0;i<bins;i++){
+    const lo=min+i*step,hi=lo+step;
+    labels.push(lo.toFixed(1)+' a '+hi.toFixed(1)+'%');
+    counts.push(devs.filter(v=>v>=lo&&v<hi).length);
+  }
+  charts.hist.data.labels=labels;
+  charts.hist.data.datasets[0].data=counts;
+  charts.hist.update();
+}
+
+function buildInspectorChart(records){
+  const map={};
+  records.forEach(r=>{
+    if(!map[r.inspector])map[r.inspector]={ok:0,total:0};
+    map[r.inspector].total++;
+    if(r.status==='Aprovado')map[r.inspector].ok++;
+  });
+  const labels=Object.keys(map).slice(0,10);
+  const pcts=labels.map(l=>map[l].total?+(map[l].ok/map[l].total*100).toFixed(1):0);
+  const colors=pcts.map(p=>p>=80?'rgba(0,229,153,.25)':p>=50?'rgba(255,211,42,.25)':'rgba(255,71,87,.25)');
+  const bcolors=pcts.map(p=>p>=80?'#00e599':p>=50?'#ffd32a':'#ff4757');
+  charts.inspector.data.labels=labels;
+  charts.inspector.data.datasets[0].data=pcts;
+  charts.inspector.data.datasets[0].backgroundColor=colors;
+  charts.inspector.data.datasets[0].borderColor=bcolors;
+  charts.inspector.update();
+}
+
+function buildTrendChart(records){
+  const W=5;
+  const devs=records.map(r=>+(+r.desvio).toFixed(2));
+  const ma=devs.map((_,i)=>{
+    if(i<W-1)return null;
+    const s=devs.slice(i-W+1,i+1);
+    return+(s.reduce((a,b)=>a+b,0)/s.length).toFixed(2);
+  }).filter(v=>v!==null);
+  const labels=records.slice(W-1).map(r=>r.sample);
+  charts.trend.data.labels=labels;
+  charts.trend.data.datasets[0].data=ma;
+  charts.trend.update();
+}
+
+function buildSampleChart(records){
+  const map={};
+  records.forEach(r=>{map[r.sample]=(map[r.sample]||0)+1;});
+  const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  charts.sample.data.labels=entries.map(e=>e[0]);
+  charts.sample.data.datasets[0].data=entries.map(e=>e[1]);
+  charts.sample.update();
+}
+
+// ── CHART COLORS ──
+function getChartColors(){
+  const dark=isDark();
+  return{
+    tc:dark?'#4e5a70':'#8090a8',
+    gc:dark?'rgba(255,255,255,.03)':'rgba(0,0,0,.04)',
+    bg2:dark?'#0f1218':'#ffffff'
+  };
 }
 
 // ── INIT CHARTS ──
 function initAnaliseCharts(){
-  const isDark=document.documentElement.getAttribute('data-theme')!=='light';
-  const tc=isDark?'#4e5a70':'#8090a8';
+  const {tc,gc}=getChartColors();
   const gf={family:'Space Mono, monospace',size:9};
   Chart.defaults.color=tc;
-  const gc=isDark?'rgba(255,255,255,.03)':'rgba(0,0,0,.04)';
 
-  anLineChart=new Chart(document.getElementById('anLineChart'),{type:'line',data:{labels:[],datasets:[
-    {label:'Especificado',data:[],borderColor:'#00d4ff',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#00d4ff',tension:.4,fill:false,borderDash:[4,3]},
-    {label:'Encontrado',data:[],borderColor:'#ff6b35',backgroundColor:'rgba(255,107,53,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#ff6b35',tension:.4,fill:true}
-  ]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
-    plugins:{legend:{position:'top',labels:{font:gf,boxWidth:8,padding:12,color:tc}}},
+  // 1. Line — Espec vs Encontrado
+  charts.line=new Chart(document.getElementById('anLineChart'),{type:'line',data:{labels:[],datasets:[
+    {label:'Especificado',data:[],borderColor:'#00d4ff',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#00d4ff',tension:.35,fill:false,borderDash:[4,3]},
+    {label:'Encontrado',data:[],borderColor:'#ff6b35',backgroundColor:'rgba(255,107,53,.07)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#ff6b35',tension:.35,fill:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:400},
+    plugins:{legend:{position:'top',labels:{font:gf,boxWidth:8,padding:12,color:tc}},tooltip:{mode:'index',intersect:false}},
     scales:{x:{grid:{color:gc},ticks:{font:gf,maxTicksLimit:12,color:tc}},y:{grid:{color:gc},ticks:{font:gf,color:tc}}}}});
 
-  anDoughnutChart=new Chart(document.getElementById('anDoughnutChart'),{type:'doughnut',data:{labels:['Aprovados','Reprovados'],datasets:[{data:[0,0],backgroundColor:['rgba(0,229,153,.15)','rgba(255,71,87,.15)'],borderColor:['#00e599','#ff4757'],borderWidth:1.5,hoverOffset:4}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'right',labels:{font:gf,boxWidth:8,padding:10,color:tc}}}}});
+  // 2. Doughnut
+  charts.doughnut=new Chart(document.getElementById('anDoughnutChart'),{type:'doughnut',data:{labels:['Aprovados','Reprovados'],datasets:[{data:[0,0],
+    backgroundColor:['rgba(0,229,153,.2)','rgba(255,71,87,.2)'],
+    borderColor:['#00e599','#ff4757'],borderWidth:2,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'right',labels:{font:gf,boxWidth:8,padding:12,color:tc}},
+        tooltip:{callbacks:{label:ctx=>{const d=ctx.dataset.data;const t=d.reduce((a,b)=>a+b,0);return ctx.label+': '+ctx.raw+' ('+Math.round(ctx.raw/t*100)+'%)';}}}}
+    }});
 
-  anDeviationChart=new Chart(document.getElementById('anDeviationChart'),{type:'bar',data:{labels:[],datasets:[{label:'Desvio %',data:[],backgroundColor:[],borderColor:[],borderWidth:1,borderRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:{font:gf,color:tc}},y:{grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}}}}});
+  // 3. Deviation bar (last 30)
+  charts.deviation=new Chart(document.getElementById('anDeviationChart'),{type:'bar',data:{labels:[],datasets:[{label:'Desvio %',data:[],backgroundColor:[],borderColor:[],borderWidth:1.5,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(2)+'%'}}},
+      scales:{x:{grid:{display:false},ticks:{font:gf,color:tc,maxRotation:45}},
+        y:{grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'},
+          ...({})}}}});
 
-  anTypeChart=new Chart(document.getElementById('anTypeChart'),{type:'bar',data:{labels:['Compressão','Tração','Estouro'],datasets:[{data:[0,0,0],backgroundColor:['rgba(0,212,255,.15)','rgba(255,107,53,.15)','rgba(255,45,120,.15)'],borderColor:['#00d4ff','#ff6b35','#ff2d78'],borderWidth:1.5,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:{font:gf,color:tc}},y:{grid:{color:gc},ticks:{font:gf,color:tc,stepSize:1}}}}});
+  // 4. Type polar / bar
+  charts.type=new Chart(document.getElementById('anTypeChart'),{type:'polarArea',data:{labels:['Compressão','Tração','Estouro'],datasets:[{data:[0,0,0],
+    backgroundColor:['rgba(0,212,255,.2)','rgba(255,107,53,.2)','rgba(255,45,120,.2)'],
+    borderColor:['#00d4ff','#ff6b35','#ff2d78'],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{font:gf,boxWidth:8,padding:10,color:tc}}},
+      scales:{r:{ticks:{font:{size:8},color:tc,backdropColor:'transparent'},grid:{color:gc}}}}});
 
-  anApprovalChart=new Chart(document.getElementById('anApprovalChart'),{type:'line',data:{labels:[],datasets:[{label:'% acumulada',data:[],borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.08)',borderWidth:2,pointRadius:2,tension:.4,fill:true}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:false}},
+  // 5. Cumulative approval line
+  charts.approval=new Chart(document.getElementById('anApprovalChart'),{type:'line',data:{labels:[],datasets:[{label:'% acumulada',data:[],borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.1)',borderWidth:2,pointRadius:2,tension:.4,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(1)+'%'}}},
       scales:{x:{grid:{display:false},ticks:{font:gf,maxTicksLimit:10,color:tc}},y:{min:0,max:100,grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}}}}});
+
+  // 6. Scatter — spec vs found
+  charts.scatter=new Chart(document.getElementById('anScatterChart'),{type:'scatter',data:{datasets:[
+    {label:'Aprovado',data:[],pointBackgroundColor:'rgba(0,229,153,.7)',pointBorderColor:'#00e599',pointRadius:5,pointHoverRadius:7},
+    {label:'Reprovado',data:[],pointBackgroundColor:'rgba(255,71,87,.7)',pointBorderColor:'#ff4757',pointRadius:5,pointHoverRadius:7}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top',labels:{font:gf,boxWidth:8,color:tc}},
+      tooltip:{callbacks:{label:ctx=>'Espec:'+ctx.raw.x.toFixed(2)+' / Enc:'+ctx.raw.y.toFixed(2)}}
+    },
+    scales:{
+      x:{grid:{color:gc},ticks:{font:gf,color:tc},title:{display:true,text:'Especificado',font:gf,color:tc}},
+      y:{grid:{color:gc},ticks:{font:gf,color:tc},title:{display:true,text:'Encontrado',font:gf,color:tc}}
+    }}});
+
+  // 7. Histogram
+  charts.hist=new Chart(document.getElementById('anHistChart'),{type:'bar',data:{labels:[],datasets:[{label:'Frequência',data:[],backgroundColor:'rgba(167,139,250,.25)',borderColor:'#a78bfa',borderWidth:1.5,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono, monospace',size:8},color:tc,maxRotation:45}},y:{grid:{color:gc},ticks:{font:gf,color:tc,stepSize:1}}}}});
+
+  // 8. Inspector approval %
+  charts.inspector=new Chart(document.getElementById('anInspectorChart'),{type:'bar',data:{labels:[],datasets:[{label:'% Aprovação',data:[],backgroundColor:[],borderColor:[],borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(1)+'%'}}},
+      scales:{
+        x:{min:0,max:100,grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}},
+        y:{grid:{display:false},ticks:{font:gf,color:tc}}
+      }}});
+
+  // 9. Trend (moving average)
+  charts.trend=new Chart(document.getElementById('anTrendChart'),{type:'line',data:{labels:[],datasets:[{label:'Média móvel desvio',data:[],borderColor:'#ffd32a',backgroundColor:'rgba(255,211,42,.08)',borderWidth:2,pointRadius:2,tension:.4,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(2)+'%'}}},
+      scales:{x:{grid:{display:false},ticks:{font:gf,maxTicksLimit:10,color:tc}},y:{grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}}}}});
+
+  // 10. Sample count
+  charts.sample=new Chart(document.getElementById('anSampleChart'),{type:'bar',data:{labels:[],datasets:[{label:'Ensaios',data:[],backgroundColor:'rgba(0,212,255,.18)',borderColor:'#00d4ff',borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:gc},ticks:{font:gf,color:tc,stepSize:1}},
+        y:{grid:{display:false},ticks:{font:gf,color:tc}}
+      }}});
 
   chartsReady=true;
   if(window._records)updateAnalise();
 }
 
-/* ════════════════════════════════════════════════
-   PAINEL DE IMPRESSÃO — FILTROS PRÓPRIOS
-════════════════════════════════════════════════ */
+function rebuildCharts(){
+  Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
+  charts={};chartsReady=false;
+  if(document.getElementById('pane-analise').classList.contains('active'))initAnaliseCharts();
+}
+
+/* ════════ PAINEL IMPRESSÃO ════════ */
 function getPpFiltered(){
   let records=[...(window._records||[])].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
   const type=document.getElementById('pp-type').value;
@@ -1105,77 +1360,35 @@ function getPpFiltered(){
   if(status)records=records.filter(r=>r.status===status);
   return records;
 }
-
-function applyPpFilter(){
-  ppFiltered=getPpFiltered();
-  updatePpChips();
-  renderPrintTable();
-}
-
+function applyPpFilter(){ppFiltered=getPpFiltered();updatePpChips();renderPrintTable();}
 function resetPpFilter(){
   ['pp-type','pp-status'].forEach(id=>document.getElementById(id).value='');
   ['pp-date-from','pp-date-to','pp-inspector','pp-sample'].forEach(id=>document.getElementById(id).value='');
-  ppFiltered=null;
-  updatePpChips();
-  renderPrintTable();
+  ppFiltered=null;updatePpChips();renderPrintTable();
 }
-
 function updatePpChips(){
-  const container=document.getElementById('pp-chips');
-  const chips=[];
+  const container=document.getElementById('pp-chips'),chips=[];
   const type=document.getElementById('pp-type').value;
-  const df=document.getElementById('pp-date-from').value;
-  const dt=document.getElementById('pp-date-to').value;
-  const inspector=document.getElementById('pp-inspector').value.trim();
-  const sample=document.getElementById('pp-sample').value.trim();
+  const df=document.getElementById('pp-date-from').value,dt=document.getElementById('pp-date-to').value;
+  const inspector=document.getElementById('pp-inspector').value.trim(),sample=document.getElementById('pp-sample').value.trim();
   const status=document.getElementById('pp-status').value;
-
-  if(type){
-    const cls=type==='burst'?'chip-burst':type==='trac'?'chip-trac':'chip-type';
-    chips.push(`<span class="chip ${cls}">${typeLabel(type)}<button class="chip-remove" onclick="clearPpField('pp-type')">×</button></span>`);
-  }
-  if(df||dt){
-    let txt=df&&dt?(fmtDate(df)+' → '+fmtDate(dt)):df?('A partir de '+fmtDate(df)):('Até '+fmtDate(dt));
-    chips.push(`<span class="chip chip-date">📅 ${txt}<button class="chip-remove" onclick="clearPpField('pp-date-from','pp-date-to')">×</button></span>`);
-  }
+  if(type){const cls=type==='burst'?'chip-burst':type==='trac'?'chip-trac':'chip-type';chips.push(`<span class="chip ${cls}">${typeLabel(type)}<button class="chip-remove" onclick="clearPpField('pp-type')">×</button></span>`);}
+  if(df||dt){let txt=df&&dt?(fmtDate(df)+' → '+fmtDate(dt)):df?('A partir de '+fmtDate(df)):('Até '+fmtDate(dt));chips.push(`<span class="chip chip-date">📅 ${txt}<button class="chip-remove" onclick="clearPpField('pp-date-from','pp-date-to')">×</button></span>`);}
   if(inspector)chips.push(`<span class="chip chip-text">👤 ${inspector}<button class="chip-remove" onclick="clearPpField('pp-inspector')">×</button></span>`);
   if(sample)chips.push(`<span class="chip chip-text">◈ ${sample}<button class="chip-remove" onclick="clearPpField('pp-sample')">×</button></span>`);
-  if(status){
-    const cls=status==='Aprovado'?'chip-status-ok':'chip-status-fail';
-    chips.push(`<span class="chip ${cls}">${status==='Aprovado'?'✓':'✗'} ${status}<button class="chip-remove" onclick="clearPpField('pp-status')">×</button></span>`);
-  }
-
-  if(!chips.length){
-    container.innerHTML='<span class="chips-empty">Nenhum filtro ativo — exibindo todos os registros</span>';
-  }else{
-    container.innerHTML=chips.join('');
-  }
+  if(status){const cls=status==='Aprovado'?'chip-status-ok':'chip-status-fail';chips.push(`<span class="chip ${cls}">${status==='Aprovado'?'✓':'✗'} ${status}<button class="chip-remove" onclick="clearPpField('pp-status')">×</button></span>`);}
+  container.innerHTML=!chips.length?'<span class="chips-empty">Nenhum filtro ativo — exibindo todos os registros</span>':chips.join('');
 }
+function clearPpField(...ids){ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});applyPpFilter();}
+function fmtDate(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return d+'/'+m+'/'+y;}
 
-function clearPpField(...ids){
-  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  applyPpFilter();
-}
-
-function fmtDate(iso){
-  if(!iso)return'';const[y,m,d]=iso.split('-');return d+'/'+m+'/'+y;
-}
-
-// ── PRINT TABLE ──
 function renderPrintTable(){
   const records=ppFiltered!==null?ppFiltered:[...(window._records||[])].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
   const tbody=document.getElementById('print-tbl-body');
   const n=records.length;
-
-  // Atualiza badge do cabeçalho
   document.getElementById('pp-result-badge').textContent=n+' ensaio'+(n!==1?'s':'');
-  const hasFilter=ppFiltered!==null;
-  document.getElementById('pp-result-text').textContent=hasFilter?'Com filtros ativos:':'Total disponível:';
-
-  if(!n){
-    tbody.innerHTML='<tr><td class="empty-td" colspan="12">Nenhum registro para os filtros aplicados.</td></tr>';
-    updateSelectCount();return;
-  }
+  document.getElementById('pp-result-text').textContent=ppFiltered!==null?'Com filtros ativos:':'Total disponível:';
+  if(!n){tbody.innerHTML='<tr><td class="empty-td" colspan="12">Nenhum registro.</td></tr>';updateSelectCount();return;}
   tbody.innerHTML=records.map((r,i)=>{
     const sc=r.status==='Aprovado'?'res-ok':'res-fail';
     const sign=(r.diff||0)>=0?'+':'';
@@ -1196,7 +1409,6 @@ function renderPrintTable(){
   }).join('');
   updateSelectCount();
 }
-
 function updateSelectCount(){
   const n=document.querySelectorAll('.print-chk:checked').length;
   document.getElementById('select-count').textContent=n+' selecionado'+(n!==1?'s':'');
@@ -1207,43 +1419,28 @@ function selectAllPrint(){document.querySelectorAll('.print-chk').forEach(c=>c.c
 function selectNonePrint(){document.querySelectorAll('.print-chk').forEach(c=>c.checked=false);const a=document.getElementById('chk-all');if(a)a.checked=false;updateSelectCount();}
 function selectFilteredPrint(){selectAllPrint();}
 function toggleAllChk(el){document.querySelectorAll('.print-chk').forEach(c=>c.checked=el.checked);updateSelectCount();}
-
-// ── COLLECT SELECTED DATA ──
 function collectSelected(){
   const ids=[...document.querySelectorAll('.print-chk:checked')].map(c=>c.dataset.id);
   if(!ids.length)return null;
-  return ids.map(id=>(window._records||[]).find(r=>r.firestoreId===id)).filter(Boolean)
-    .sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+  return ids.map(id=>(window._records||[]).find(r=>r.firestoreId===id)).filter(Boolean).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
 }
 
-// ── VISUALIZAR ──
 function visualizeSelected(){
-  const data=collectSelected();
-  if(!data||!data.length){showToast('Selecione ao menos um registro.');return;}
+  const data=collectSelected();if(!data||!data.length){showToast('Selecione ao menos um registro.');return;}
   currentPrintData=data;
   const empresa=document.getElementById('pr-empresa').value.trim()||'Röchling';
   const numBase=document.getElementById('pr-laudo').value.trim()||'ROC-'+new Date().getFullYear()+'-001';
   const resp=document.getElementById('pr-resp').value.trim()||'—';
   const obs=document.getElementById('pr-obs').value.trim();
   const mode=document.getElementById('pr-mode').value;
-
-  let html='';
-  if(mode==='individual'){
-    html=data.map((r,i)=>buildReportPage([r],empresa,numBase+'-'+String(i+1).padStart(3,'0'),resp,obs,false)).join('<hr style="border:none;border-top:2px dashed #ccd;margin:24px 0">');
-  }else{
-    html=buildReportPage(data,empresa,numBase,resp,obs,true);
-  }
-
+  let html=mode==='individual'?data.map((r,i)=>buildReportPage([r],empresa,numBase+'-'+String(i+1).padStart(3,'0'),resp,obs,false)).join('<hr style="border:none;border-top:2px dashed #ccd;margin:24px 0">'):buildReportPage(data,empresa,numBase,resp,obs,true);
   document.getElementById('preview-frame').innerHTML=`<div class="preview-page">${html}</div>`;
   document.getElementById('preview-title').textContent='⎙ Pré-visualização — '+data.length+' ensaio'+(data.length!==1?'s':'');
   document.getElementById('preview-info').textContent=empresa+' · '+numBase;
   document.getElementById('preview-overlay').classList.add('open');
 }
-
 function closePreview(){document.getElementById('preview-overlay').classList.remove('open');}
-
 function doPrint(){
-  // Abre janela de impressão a partir dos dados em cache
   if(!currentPrintData)return;
   const empresa=document.getElementById('pr-empresa').value.trim()||'Röchling';
   const numBase=document.getElementById('pr-laudo').value.trim()||'ROC-'+new Date().getFullYear()+'-001';
@@ -1251,14 +1448,10 @@ function doPrint(){
   const obs=document.getElementById('pr-obs').value.trim();
   const mode=document.getElementById('pr-mode').value;
   _openPrintWin(currentPrintData,empresa,numBase,resp,obs,mode);
-  closePreview();
-  showToast('✓ Enviado para impressão!');
+  closePreview();showToast('✓ Enviado para impressão!');
 }
-
-// ── IMPRIMIR DIRETO ──
 function printSelected(){
-  const data=collectSelected();
-  if(!data||!data.length){showToast('Selecione ao menos um registro.');return;}
+  const data=collectSelected();if(!data||!data.length){showToast('Selecione ao menos um registro.');return;}
   currentPrintData=data;
   const empresa=document.getElementById('pr-empresa').value.trim()||'Röchling';
   const numBase=document.getElementById('pr-laudo').value.trim()||'ROC-'+new Date().getFullYear()+'-001';
@@ -1266,29 +1459,21 @@ function printSelected(){
   const obs=document.getElementById('pr-obs').value.trim();
   const mode=document.getElementById('pr-mode').value;
   _openPrintWin(data,empresa,numBase,resp,obs,mode);
-  showToast('✓ Laudo(s) gerado(s) — '+data.length+' ensaio(s)!');
+  showToast('✓ Laudo(s) gerado(s)!');
 }
-
 function _openPrintWin(data,empresa,numBase,resp,obs,mode){
-  let body='';
-  if(mode==='individual'){
-    body=data.map((r,i)=>buildReportPage([r],empresa,numBase+'-'+String(i+1).padStart(3,'0'),resp,obs,false)).join('<div style="page-break-after:always"></div>');
-  }else{
-    body=buildReportPage(data,empresa,numBase,resp,obs,true);
-  }
+  let body=mode==='individual'?data.map((r,i)=>buildReportPage([r],empresa,numBase+'-'+String(i+1).padStart(3,'0'),resp,obs,false)).join('<div style="page-break-after:always"></div>'):buildReportPage(data,empresa,numBase,resp,obs,true);
   const w=window.open('','_blank');
   w.document.write(wrapReportHtml(body));
   w.document.close();
 }
-
 function wrapReportHtml(body){
   return`<!DOCTYPE html><html lang="pt-BR"><head>
 <meta charset="UTF-8"><title>Laudo — Röchling</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@700;800&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
 ${reportStyles()}
 <script>window.onload=()=>{window.print();}<\/script>
-</head><body>${body}</body></html>`;
-}
+</head><body>${body}</body></html>`;}
 
 function buildReportPage(data,empresa,numLaudo,resp,obs,showSig){
   const now=new Date();
@@ -1325,7 +1510,7 @@ function buildReportPage(data,empresa,numLaudo,resp,obs,showSig){
 <div class="hdr">
   <div><div class="brand">Röchling / <em>Metrologia</em></div><div class="brand-sub">Sistema de Inspeção Mecânica</div><div class="brand-co">${empresa}</div></div>
   <div class="rTitle"><h1>Laudo Técnico de Ensaio</h1>
-  <p>Compressão · Tração · Estouro — Resultados Certificados</p>
+  <p>Compressão · Tração · Estouro</p>
   <div class="num">${numLaudo}</div>
   <p style="margin-top:5px;font-size:8px;color:#94a3b8;font-family:Space Mono,monospace">Emitido em ${dtStr} às ${hrStr}</p></div>
 </div>
@@ -1406,8 +1591,11 @@ tbody td{padding:5px 6px;border-bottom:1px solid #f1f5f9;}
 .footer{border-top:1px solid #e2e8f0;padding-top:7px;margin-top:10px;display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:7.5px;color:#94a3b8;}
 </style>`;}
 
-// ── CLEAR FORM ──
+// ── MISC ──
+function cancelEdit(){editingId=null;clearForm();}
+
 function clearForm(){
+  editingId=null;
   ['f-inspector','f-sample','f-spec','f-found','f-notes','f-datetime'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-unit').value='kN';
   document.getElementById('auto-dt').checked=true;toggleDt();
@@ -1418,9 +1606,13 @@ function clearForm(){
   document.getElementById('diff-row').style.display='none';
   document.getElementById('prog-fill').style.width='0%';
   document.getElementById('prog-label').textContent='Preencha os valores para avaliar';
+  document.getElementById('edit-banner').classList.remove('visible');
+  document.getElementById('form-panel-title').textContent='Novo ensaio';
+  document.getElementById('btn-save').className='btn-save';
+  document.getElementById('save-label').textContent='REGISTRAR RESULTADO';
+  setType('comp');
 }
 
-// ── CSV ──
 function exportCSV(){
   const records=window._records||[];
   if(!records.length){showToast('Nenhum dado para exportar.');return;}
@@ -1437,7 +1629,6 @@ function exportCSV(){
   a.click();showToast('✓ CSV exportado.');
 }
 
-// ── MODAL RÁPIDO (aba 1) ──
 function openModal(){const n=(window._records||[]).length;if(!n){showToast('Nenhum registro.');return;}document.getElementById('modal').classList.add('open');}
 function closeModal(){document.getElementById('modal').classList.remove('open');}
 function printSingle(fid){
@@ -1452,8 +1643,7 @@ function printReport(){
   const resp=document.getElementById('p-resp').value.trim()||'—';
   const flt=document.getElementById('p-filter').value.trim().toLowerCase();
   const obs=document.getElementById('p-obs').value.trim();
-  const df=document.getElementById('p-date-from').value;
-  const dt=document.getElementById('p-date-to').value;
+  const df=document.getElementById('p-date-from').value,dt=document.getElementById('p-date-to').value;
   let data=[...(window._records||[])].sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
   if(flt)data=data.filter(r=>r.sample.toLowerCase().includes(flt)||r.inspector.toLowerCase().includes(flt));
   if(df)data=data.filter(r=>!r.dateFull||r.dateFull>=df);
@@ -1465,11 +1655,10 @@ function printReport(){
   closeModal();showToast('✓ Laudo gerado!');
 }
 
-// ── TOAST ──
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3500);}
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeModal();closeConfirmClear();closePreview();}
+  if(e.key==='Escape'){closeModal();closeConfirmClear();closePreview();closeEditModal();}
 });
 </script>
 </body>
