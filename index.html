@@ -113,8 +113,6 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;width:120px;height
 .cloud-bar.connected{background:var(--successL);border-color:var(--success);color:var(--success);}
 .cloud-bar.error{background:var(--dangerL);border-color:var(--danger);color:var(--danger);}
 .cloud-right{display:flex;align-items:center;gap:12px;}
-.btn-danger-sm{padding:4px 12px;border-radius:3px;border:1px solid rgba(255,71,87,.4);background:var(--dangerL);color:var(--danger);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.08em;cursor:pointer;transition:all .15s;}
-.btn-danger-sm:hover{background:var(--danger);color:#fff;}
 
 /* ── METRICS ── */
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
@@ -394,7 +392,6 @@ tbody tr.editing-row td{background:var(--editL);border-bottom-color:rgba(245,158
   <span>☁ &nbsp;<span id="cloud-status">Conectando ao Firebase...</span></span>
   <div class="cloud-right">
     <span id="cloud-count" style="opacity:.6;font-size:9px"></span>
-    <button class="btn-danger-sm" onclick="openConfirmClear()">LIMPAR TUDO</button>
   </div>
 </div>
 
@@ -577,7 +574,7 @@ tbody tr.editing-row td{background:var(--editL);border-bottom-color:rgba(245,158
       </div>
     </div>
 
-    <!-- ROW 3: Radar + Scatter + Histograma -->
+    <!-- ROW 3: Scatter + Histograma + Inspector -->
     <div class="section-label">Análise Avançada</div>
     <div class="charts-grid-3">
       <div class="chart-panel">
@@ -594,7 +591,7 @@ tbody tr.editing-row td{background:var(--editL);border-bottom-color:rgba(245,158
       </div>
     </div>
 
-    <!-- ROW 4: Linha de desvio acumulado + Barras por amostra -->
+    <!-- ROW 4: Tendência + Amostras -->
     <div class="section-label">Tendência &amp; Amostras</div>
     <div class="charts-grid-2">
       <div class="chart-panel">
@@ -741,7 +738,7 @@ tbody tr.editing-row td{background:var(--editL);border-bottom-color:rgba(245,158
   </div>
 </div>
 
-<!-- CONFIRM CLEAR -->
+<!-- CONFIRM CLEAR (mantido no código mas sem botão de acesso) -->
 <div class="overlay no-print" id="confirm-overlay">
   <div class="confirm-modal">
     <h3>⚠ Apagar tudo?</h3>
@@ -820,7 +817,6 @@ window._onDataReady=function(){
   renderTable();
   updateTabCounts(records);
   if(chartsReady)updateAnalise();
-  // update print tab if active
   const printPaneActive=document.getElementById('pane-impressao')?.classList.contains('active');
   if(printPaneActive)renderPrintTable();
 };
@@ -865,7 +861,7 @@ function setType(t){
   liveCalc();
 }
 
-// ── LIVE CALC (form principal) ──
+// ── LIVE CALC ──
 function liveCalc(){
   const spec=parseFloat(document.getElementById('f-spec').value);
   const found=parseFloat(document.getElementById('f-found').value);
@@ -959,7 +955,7 @@ async function saveRecord(){
   finally{btn.disabled=false;sp.style.display='none';lbl.textContent='REGISTRAR RESULTADO';}
 }
 
-// ── EDIT ── 
+// ── EDIT ──
 function openEditModal(fid){
   const r=(window._records||[]).find(x=>x.firestoreId===fid);
   if(!r)return;
@@ -972,13 +968,8 @@ function openEditModal(fid){
   document.getElementById('em-spec').value=r.spec||'';
   document.getElementById('em-found').value=r.found||'';
   document.getElementById('em-notes').value=r.notes||'';
-  // date / time
   if(r.dateFull){document.getElementById('em-date').value=r.dateFull;}
-  if(r.time){
-    // convert "HH:MM:SS" or "HH:MM" to "HH:MM"
-    const tp=r.time.slice(0,5);
-    document.getElementById('em-time').value=tp;
-  }
+  if(r.time){const tp=r.time.slice(0,5);document.getElementById('em-time').value=tp;}
   if(r.weekday){document.getElementById('em-weekday').value=r.weekday;}
   calcEditModal();
   document.getElementById('edit-modal').classList.add('open');
@@ -1023,7 +1014,7 @@ async function deleteRecord(id){
   catch(e){showToast('⚠ '+e.message);}
 }
 
-// ── CLEAR ALL ──
+// ── CLEAR ALL (funções mantidas, botão removido) ──
 function openConfirmClear(){document.getElementById('confirm-count').textContent=(window._records||[]).length;document.getElementById('confirm-overlay').classList.add('open');}
 function closeConfirmClear(){document.getElementById('confirm-overlay').classList.remove('open');}
 async function clearAllData(){
@@ -1128,53 +1119,30 @@ function updateAnalise(){
   document.getElementById('filter-info').textContent=n+' registro'+(n!==1?'s':'')+' exibido'+(n!==1?'s':'');
   document.getElementById('an-chart-count').textContent=n+' ensaio'+(n!==1?'s':'');
   if(!chartsReady)return;
-
-  const tc=isDark()?'#4e5a70':'#8090a8';
-  const gc=isDark()?'rgba(255,255,255,.03)':'rgba(0,0,0,.04)';
-
-  // 1. Line chart
   charts.line.data.labels=records.map(r=>r.sample);
   charts.line.data.datasets[0].data=records.map(r=>r.spec);
   charts.line.data.datasets[1].data=records.map(r=>r.found);
   charts.line.update();
-
-  // 2. Doughnut
   charts.doughnut.data.datasets[0].data=[ok,fail];
   charts.doughnut.update();
-
-  // 3. Deviation bars (last 30)
   const l30=records.slice(-30);
   charts.deviation.data.labels=l30.map(r=>r.sample);
   charts.deviation.data.datasets[0].data=l30.map(r=>parseFloat((+r.desvio).toFixed(1)));
   charts.deviation.data.datasets[0].backgroundColor=l30.map(r=>r.status==='Aprovado'?'rgba(0,229,153,.25)':'rgba(255,71,87,.25)');
   charts.deviation.data.datasets[0].borderColor=l30.map(r=>r.status==='Aprovado'?'#00e599':'#ff4757');
   charts.deviation.update();
-
-  // 4. Type
   charts.type.data.datasets[0].data=[records.filter(r=>r.type==='comp').length,records.filter(r=>r.type==='trac').length,records.filter(r=>r.type==='burst').length];
   charts.type.update();
-
-  // 5. Cumulative approval
   let cumOk=0;
   charts.approval.data.labels=records.map(r=>r.sample);
   charts.approval.data.datasets[0].data=records.map((r,i)=>{if(r.status==='Aprovado')cumOk++;return+((cumOk/(i+1))*100).toFixed(1);});
   charts.approval.update();
-
-  // 6. Scatter
   charts.scatter.data.datasets[0].data=records.filter(r=>r.status==='Aprovado').map(r=>({x:+r.spec,y:+r.found}));
   charts.scatter.data.datasets[1].data=records.filter(r=>r.status==='Reprovado').map(r=>({x:+r.spec,y:+r.found}));
   charts.scatter.update();
-
-  // 7. Histogram of desvio
   buildHistogram(records);
-
-  // 8. Inspector bar
   buildInspectorChart(records);
-
-  // 9. Trend chart (moving average)
   buildTrendChart(records);
-
-  // 10. Sample count chart
   buildSampleChart(records);
 }
 
@@ -1235,14 +1203,9 @@ function buildSampleChart(records){
   charts.sample.update();
 }
 
-// ── CHART COLORS ──
 function getChartColors(){
   const dark=isDark();
-  return{
-    tc:dark?'#4e5a70':'#8090a8',
-    gc:dark?'rgba(255,255,255,.03)':'rgba(0,0,0,.04)',
-    bg2:dark?'#0f1218':'#ffffff'
-  };
+  return{tc:dark?'#4e5a70':'#8090a8',gc:dark?'rgba(255,255,255,.03)':'rgba(0,0,0,.04)',bg2:dark?'#0f1218':'#ffffff'};
 }
 
 // ── INIT CHARTS ──
@@ -1250,89 +1213,53 @@ function initAnaliseCharts(){
   const {tc,gc}=getChartColors();
   const gf={family:'Space Mono, monospace',size:9};
   Chart.defaults.color=tc;
-
-  // 1. Line — Espec vs Encontrado
   charts.line=new Chart(document.getElementById('anLineChart'),{type:'line',data:{labels:[],datasets:[
     {label:'Especificado',data:[],borderColor:'#00d4ff',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#00d4ff',tension:.35,fill:false,borderDash:[4,3]},
     {label:'Encontrado',data:[],borderColor:'#ff6b35',backgroundColor:'rgba(255,107,53,.07)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#ff6b35',tension:.35,fill:true}
   ]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:400},
     plugins:{legend:{position:'top',labels:{font:gf,boxWidth:8,padding:12,color:tc}},tooltip:{mode:'index',intersect:false}},
     scales:{x:{grid:{color:gc},ticks:{font:gf,maxTicksLimit:12,color:tc}},y:{grid:{color:gc},ticks:{font:gf,color:tc}}}}});
-
-  // 2. Doughnut
   charts.doughnut=new Chart(document.getElementById('anDoughnutChart'),{type:'doughnut',data:{labels:['Aprovados','Reprovados'],datasets:[{data:[0,0],
-    backgroundColor:['rgba(0,229,153,.2)','rgba(255,71,87,.2)'],
-    borderColor:['#00e599','#ff4757'],borderWidth:2,hoverOffset:6}]},
+    backgroundColor:['rgba(0,229,153,.2)','rgba(255,71,87,.2)'],borderColor:['#00e599','#ff4757'],borderWidth:2,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
       plugins:{legend:{position:'right',labels:{font:gf,boxWidth:8,padding:12,color:tc}},
-        tooltip:{callbacks:{label:ctx=>{const d=ctx.dataset.data;const t=d.reduce((a,b)=>a+b,0);return ctx.label+': '+ctx.raw+' ('+Math.round(ctx.raw/t*100)+'%)';}}}}
-    }});
-
-  // 3. Deviation bar (last 30)
+        tooltip:{callbacks:{label:ctx=>{const d=ctx.dataset.data;const t=d.reduce((a,b)=>a+b,0);return ctx.label+': '+ctx.raw+' ('+Math.round(ctx.raw/t*100)+'%)';}}}}}});
   charts.deviation=new Chart(document.getElementById('anDeviationChart'),{type:'bar',data:{labels:[],datasets:[{label:'Desvio %',data:[],backgroundColor:[],borderColor:[],borderWidth:1.5,borderRadius:3}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(2)+'%'}}},
-      scales:{x:{grid:{display:false},ticks:{font:gf,color:tc,maxRotation:45}},
-        y:{grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'},
-          ...({})}}}});
-
-  // 4. Type polar / bar
+      scales:{x:{grid:{display:false},ticks:{font:gf,color:tc,maxRotation:45}},y:{grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}}}}});
   charts.type=new Chart(document.getElementById('anTypeChart'),{type:'polarArea',data:{labels:['Compressão','Tração','Estouro'],datasets:[{data:[0,0,0],
-    backgroundColor:['rgba(0,212,255,.2)','rgba(255,107,53,.2)','rgba(255,45,120,.2)'],
-    borderColor:['#00d4ff','#ff6b35','#ff2d78'],borderWidth:2}]},
+    backgroundColor:['rgba(0,212,255,.2)','rgba(255,107,53,.2)','rgba(255,45,120,.2)'],borderColor:['#00d4ff','#ff6b35','#ff2d78'],borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'right',labels:{font:gf,boxWidth:8,padding:10,color:tc}}},
       scales:{r:{ticks:{font:{size:8},color:tc,backdropColor:'transparent'},grid:{color:gc}}}}});
-
-  // 5. Cumulative approval line
   charts.approval=new Chart(document.getElementById('anApprovalChart'),{type:'line',data:{labels:[],datasets:[{label:'% acumulada',data:[],borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.1)',borderWidth:2,pointRadius:2,tension:.4,fill:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(1)+'%'}}},
       scales:{x:{grid:{display:false},ticks:{font:gf,maxTicksLimit:10,color:tc}},y:{min:0,max:100,grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}}}}});
-
-  // 6. Scatter — spec vs found
   charts.scatter=new Chart(document.getElementById('anScatterChart'),{type:'scatter',data:{datasets:[
     {label:'Aprovado',data:[],pointBackgroundColor:'rgba(0,229,153,.7)',pointBorderColor:'#00e599',pointRadius:5,pointHoverRadius:7},
     {label:'Reprovado',data:[],pointBackgroundColor:'rgba(255,71,87,.7)',pointBorderColor:'#ff4757',pointRadius:5,pointHoverRadius:7}
   ]},options:{responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{position:'top',labels:{font:gf,boxWidth:8,color:tc}},
-      tooltip:{callbacks:{label:ctx=>'Espec:'+ctx.raw.x.toFixed(2)+' / Enc:'+ctx.raw.y.toFixed(2)}}
-    },
-    scales:{
-      x:{grid:{color:gc},ticks:{font:gf,color:tc},title:{display:true,text:'Especificado',font:gf,color:tc}},
-      y:{grid:{color:gc},ticks:{font:gf,color:tc},title:{display:true,text:'Encontrado',font:gf,color:tc}}
-    }}});
-
-  // 7. Histogram
+    plugins:{legend:{position:'top',labels:{font:gf,boxWidth:8,color:tc}},tooltip:{callbacks:{label:ctx=>'Espec:'+ctx.raw.x.toFixed(2)+' / Enc:'+ctx.raw.y.toFixed(2)}}},
+    scales:{x:{grid:{color:gc},ticks:{font:gf,color:tc},title:{display:true,text:'Especificado',font:gf,color:tc}},
+      y:{grid:{color:gc},ticks:{font:gf,color:tc},title:{display:true,text:'Encontrado',font:gf,color:tc}}}}});
   charts.hist=new Chart(document.getElementById('anHistChart'),{type:'bar',data:{labels:[],datasets:[{label:'Frequência',data:[],backgroundColor:'rgba(167,139,250,.25)',borderColor:'#a78bfa',borderWidth:1.5,borderRadius:3}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
       plugins:{legend:{display:false}},
       scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono, monospace',size:8},color:tc,maxRotation:45}},y:{grid:{color:gc},ticks:{font:gf,color:tc,stepSize:1}}}}});
-
-  // 8. Inspector approval %
   charts.inspector=new Chart(document.getElementById('anInspectorChart'),{type:'bar',data:{labels:[],datasets:[{label:'% Aprovação',data:[],backgroundColor:[],borderColor:[],borderWidth:1.5,borderRadius:4}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(1)+'%'}}},
-      scales:{
-        x:{min:0,max:100,grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}},
-        y:{grid:{display:false},ticks:{font:gf,color:tc}}
-      }}});
-
-  // 9. Trend (moving average)
+      scales:{x:{min:0,max:100,grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}},y:{grid:{display:false},ticks:{font:gf,color:tc}}}}});
   charts.trend=new Chart(document.getElementById('anTrendChart'),{type:'line',data:{labels:[],datasets:[{label:'Média móvel desvio',data:[],borderColor:'#ffd32a',backgroundColor:'rgba(255,211,42,.08)',borderWidth:2,pointRadius:2,tension:.4,fill:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(2)+'%'}}},
       scales:{x:{grid:{display:false},ticks:{font:gf,maxTicksLimit:10,color:tc}},y:{grid:{color:gc},ticks:{font:gf,color:tc,callback:v=>v+'%'}}}}});
-
-  // 10. Sample count
   charts.sample=new Chart(document.getElementById('anSampleChart'),{type:'bar',data:{labels:[],datasets:[{label:'Ensaios',data:[],backgroundColor:'rgba(0,212,255,.18)',borderColor:'#00d4ff',borderWidth:1.5,borderRadius:4}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
       plugins:{legend:{display:false}},
-      scales:{
-        x:{grid:{color:gc},ticks:{font:gf,color:tc,stepSize:1}},
-        y:{grid:{display:false},ticks:{font:gf,color:tc}}
-      }}});
-
+      scales:{x:{grid:{color:gc},ticks:{font:gf,color:tc,stepSize:1}},y:{grid:{display:false},ticks:{font:gf,color:tc}}}}});
   chartsReady=true;
   if(window._records)updateAnalise();
 }
