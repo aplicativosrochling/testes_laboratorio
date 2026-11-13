@@ -1108,16 +1108,17 @@ select:disabled{opacity:.75;cursor:not-allowed;}
       </div>
       <div class="field"><label class="field-label">Unidade</label>
         <select id="em-unit">
-          <option value="kN">kN</option><option value="MPa">MPa</option>
+          <option value="—">— (visual)</option><option value="kN">kN</option><option value="MPa">MPa</option>
           <option value="kgf">kgf</option><option value="tf">tf</option>
           <option value="N">N</option><option value="mm">mm</option>
           <option value="psi">psi</option><option value="bar">bar</option>
         </select>
       </div>
     </div>
-    <div class="modal-row">
+    <div class="modal-row-3">
       <div class="field"><label class="field-label">Inspetor *</label><input type="text" id="em-inspector" placeholder="Nome completo"></div>
       <div class="field"><label class="field-label">Cód. amostra *</label><input type="text" id="em-sample" placeholder="Ex: CP-001"></div>
+      <div class="field"><label class="field-label">Variante</label><input type="text" id="em-variant" placeholder="Ex: LE, LD…" maxlength="40"></div>
     </div>
     <div class="modal-row-3">
       <div class="field"><label class="field-label">Linha de produção</label><input type="text" id="em-line" placeholder="Ex: Linha 02"></div>
@@ -1126,8 +1127,8 @@ select:disabled{opacity:.75;cursor:not-allowed;}
       <div class="field"><label class="field-label">Código SAP</label><input type="text" id="em-sap" placeholder="Ex: 7000012345"></div>
     </div>
     <div class="modal-row-3">
-      <div class="field"><label class="field-label">Data (AAAA-MM-DD)</label><input type="date" id="em-date"></div>
-      <div class="field"><label class="field-label">Hora (HH:MM)</label><input type="time" id="em-time"></div>
+      <div class="field"><label class="field-label">Data</label><input type="date" id="em-date" onchange="emAutoWd()"></div>
+      <div class="field"><label class="field-label">Hora (HH:MM:SS)</label><input type="time" id="em-time" step="1"></div>
       <div class="field"><label class="field-label">Dia semana</label>
         <select id="em-weekday"><option>Dom</option><option>Seg</option><option>Ter</option><option>Qua</option><option>Qui</option><option>Sex</option><option>Sáb</option></select>
       </div>
@@ -1306,14 +1307,14 @@ function fmtDev(r,sign){return r.type==='visual'?'—':sign+(+r.desvio).toFixed(
 function unitCell(r){return r.type==='visual'?(r.visItem||'—'):r.unit;}
 function toggleEditVis(){
   const v=document.getElementById('em-type').value==='visual';
-  const tp=document.getElementById('em-type').value;
-  const eu=document.getElementById('em-unit');
-  eu.disabled=(tp==='burst'||tp==='leak');
-  if(tp==='burst'||tp==='leak')eu.value='bar';
   document.getElementById('em-spec').closest('.modal-row').style.display=v?'none':'';
   document.getElementById('em-result-box').style.display=v?'none':'';
   document.getElementById('em-vis-block').style.display=v?'':'none';
   calcEditModal();
+}
+function emAutoWd(){
+  const d=document.getElementById('em-date').value;
+  if(d)document.getElementById('em-weekday').value=WEEKDAYS_PT[new Date(d+'T12:00:00').getDay()];
 }
 
 // ── LIVE CALC ──
@@ -1355,7 +1356,7 @@ function calcEditModal(){
   const spec=parseFloat(document.getElementById('em-spec').value);
   const found=parseFloat(document.getElementById('em-found').value);
   const type=document.getElementById('em-type').value;
-  const unit=(type==='burst'||type==='leak')?'bar':document.getElementById('em-unit').value;
+  const unit=document.getElementById('em-unit').value;
   if(isNaN(spec)||isNaN(found)){
     document.getElementById('em-live-badge').textContent='—';
     document.getElementById('em-live-badge').className='status-badge s-idle';
@@ -1438,6 +1439,7 @@ function openEditModal(fid){
   document.getElementById('em-unit').value=r.unit||'kN';
   document.getElementById('em-inspector').value=r.inspector||'';
   document.getElementById('em-sample').value=r.sample||'';
+  document.getElementById('em-variant').value=r.variant||'';
   document.getElementById('em-line').value=r.line||'';
   document.getElementById('em-shift').value=r.shift||'';
   document.getElementById('em-sap').value=r.sap||'';
@@ -1445,7 +1447,7 @@ function openEditModal(fid){
   document.getElementById('em-found').value=r.found||'';
   document.getElementById('em-notes').value=r.notes||'';
   if(r.dateFull){document.getElementById('em-date').value=r.dateFull;}
-  if(r.time){const tp=r.time.slice(0,5);document.getElementById('em-time').value=tp;}
+  if(r.time){document.getElementById('em-time').value=r.time.slice(0,8);}
   if(r.weekday){document.getElementById('em-weekday').value=r.weekday;}
   calcEditModal();
   document.getElementById('em-vis-item').value=r.visItem||'';document.getElementById('em-vis-local').value=r.visLocal||'';document.getElementById('em-vis-result').value=r.visResult||'OK';
@@ -1457,9 +1459,10 @@ function closeEditModal(){document.getElementById('edit-modal').classList.remove
 async function saveEdit(){
   if(!editingId){showToast('Nenhum registro em edição.');return;}
   const type=document.getElementById('em-type').value;
-  const unit=(type==='burst'||type==='leak')?'bar':document.getElementById('em-unit').value;
+  const unit=document.getElementById('em-unit').value;
   const inspector=document.getElementById('em-inspector').value.trim();
   const sample=document.getElementById('em-sample').value.trim();
+  const variant=document.getElementById('em-variant').value.trim();
   const line=document.getElementById('em-line').value.trim(),shift=document.getElementById('em-shift').value,sap=document.getElementById('em-sap').value.trim();
   const spec=parseFloat(document.getElementById('em-spec').value);
   const found=parseFloat(document.getElementById('em-found').value);
@@ -1478,7 +1481,7 @@ async function saveEdit(){
   try{
     const{doc,updateDoc}=window._fbFns;
     await updateDoc(doc(window._db,window._col,editingId),{
-      type,unit:isVis?'—':unit,inspector,sample,line:line||null,shift:shift||null,sap:sap||null,spec:isVis?null:spec,found:isVis?null:found,notes,diff,desvio,status,
+      type,unit:isVis?'—':unit,inspector,sample,variant:variant||null,line:line||null,shift:shift||null,sap:sap||null,spec:isVis?null:spec,found:isVis?null:found,notes,diff,desvio,status,
       visItem:isVis?visItem:null,visLocal:isVis?visLocal:null,visResult:isVis?visRes:null,
       ...(date?{date}:{}),
       ...(dateFull?{dateFull}:{}),
