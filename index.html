@@ -262,6 +262,9 @@ tbody tr:hover td{background:var(--bg3);}
 .tbl-compact tbody td{padding:6px 8px;}
 .td-datetime{white-space:nowrap;}
 .td-nowrap{white-space:nowrap;}
+.row-click{cursor:pointer;}
+.row-click:hover td{background:var(--bg3);}
+.editing-row.row-click:hover td{background:var(--editL);}
 tbody tr.editing-row td{background:var(--editL);border-bottom-color:rgba(245,158,11,.3);}
 .td-mono{font-family:'IBM Plex Mono',monospace;color:var(--text);letter-spacing:.03em;}
 .td-date-main{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--text);letter-spacing:.02em;display:block;}
@@ -773,7 +776,7 @@ select:disabled{opacity:.75;cursor:not-allowed;}
           <thead>
             <tr>
               <th>#</th><th>Data · Hora</th><th>Tipo</th>
-              <th>Inspetor</th><th>Amostra</th><th>Linha</th><th>Turno</th><th>SAP</th><th>Unid./Item</th>
+              <th>Inspetor</th><th>SAP</th><th>Amostra</th><th>Linha</th><th>Turno</th><th>Unid./Item</th>
               <th>Espec.</th><th>Encontrado</th><th>Desvio</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
@@ -803,17 +806,15 @@ select:disabled{opacity:.75;cursor:not-allowed;}
 
     <div class="panel">
       <div class="panel-title" id="pt-title">Cadastro de peças</div>
-      <div class="cad-note">O inspetor digita apenas o <strong>código</strong> no ensaio; <strong>tipo, limite, unidade, linha de produção, turno e código SAP vêm daqui</strong> e não podem ser digitados no ensaio. Regra de aprovação: <em>valor encontrado ≥ limite</em>. Uma peça pode ter <strong>várias especificações</strong> (ex.: LE e LD, cavidade 1 e 2, estouro e tração). Alterar um limite vale só para ensaios futuros — os já gravados mantêm o valor da época.</div>
+      <div class="cad-note">O inspetor digita apenas o <strong>código</strong> no ensaio; <strong>tipo, limite, unidade, linha de produção e código SAP vêm daqui</strong> e não podem ser digitados no ensaio. O <strong>turno</strong> é do inspetor (aba Inspetores). Regra de aprovação: <em>valor encontrado ≥ limite</em>. Uma peça pode ter <strong>várias especificações</strong> (ex.: LE e LD, cavidade 1 e 2, estouro e tração). Alterar um limite vale só para ensaios futuros — os já gravados mantêm o valor da época.</div>
       <div class="row2">
         <div class="field"><label class="field-label">Código da peça *</label><input type="text" id="pt-code" placeholder="Ex: CP-001" autocomplete="off"></div>
         <div class="field"><label class="field-label">Descrição</label><input type="text" id="pt-desc" placeholder="Ex: Coletor de admissão" autocomplete="off"></div>
       </div>
       <div class="row2">
-        <div class="field"><label class="field-label">Linha de produção *</label><input type="text" id="pt-line" list="line-list" placeholder="Ex: Linha 02" autocomplete="off"><datalist id="line-list"><option value="Linha 01"><option value="Linha 02"><option value="Linha 03"><option value="Linha 04"><option value="Linha 05"><option value="Linha 06"><option value="Linha 07"><option value="Linha 08"></datalist></div>
-        <div class="field"><label class="field-label">Turno *</label>
-          <select id="pt-shift"><option value="">Selecione...</option><option value="1º Turno">1º Turno</option><option value="2º Turno">2º Turno</option><option value="3º Turno">3º Turno</option></select></div>
+        <div class="field"><label class="field-label">Linha de produção (opcional)</label><input type="text" id="pt-line" list="line-list" placeholder="Ex: Linha 02" autocomplete="off"><datalist id="line-list"><option value="Linha 01"><option value="Linha 02"><option value="Linha 03"><option value="Linha 04"><option value="Linha 05"><option value="Linha 06"><option value="Linha 07"><option value="Linha 08"></datalist></div>
+        <div class="field"><label class="field-label">Código SAP</label><input type="text" id="pt-sap" placeholder="Ex: 7000012345" autocomplete="off" style="font-family:'IBM Plex Mono',monospace"></div>
       </div>
-      <div class="field"><label class="field-label">Código SAP</label><input type="text" id="pt-sap" placeholder="Ex: 7000012345" autocomplete="off" style="font-family:'IBM Plex Mono',monospace"></div>
       <div class="panel-title" style="margin-top:2px">Especificações da peça</div>
       <div class="row2" style="grid-template-columns:1fr">
         <div class="field"><label class="field-label">Variante (digite livremente ou escolha)</label>
@@ -844,17 +845,21 @@ select:disabled{opacity:.75;cursor:not-allowed;}
       </div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Código</th><th>Descrição</th><th>Linha</th><th>Turno</th><th>SAP</th><th>Especificações (tipo · variante · limite)</th><th></th></tr></thead>
-          <tbody id="pt-body"><tr><td class="cad-empty" colspan="7">Carregando...</td></tr></tbody>
+          <thead><tr><th>Código</th><th>Descrição</th><th>Linha</th><th>SAP</th><th>Especificações (tipo · variante · limite)</th><th></th></tr></thead>
+          <tbody id="pt-body"><tr><td class="cad-empty" colspan="6">Carregando...</td></tr></tbody>
         </table>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-title" id="in-title">Cadastro de inspetores</div>
-      <div class="cad-note">Só inspetores <strong>ativos</strong> aparecem na lista do ensaio. Inativar preserva o histórico.</div>
+      <div class="cad-note">Só inspetores <strong>ativos</strong> aparecem na lista do ensaio. Inativar preserva o histórico. O <strong>turno</strong> do inspetor é gravado automaticamente em cada ensaio que ele assinar.</div>
       <div class="field"><label class="field-label">Nome completo *</label><input type="text" id="in-name" placeholder="Nome completo" autocomplete="off"></div>
-      <div class="field"><label class="field-label">Matrícula (opcional)</label><input type="text" id="in-mat" placeholder="Ex: 12345" autocomplete="off"></div>
+      <div class="row2">
+        <div class="field"><label class="field-label">Matrícula (opcional)</label><input type="text" id="in-mat" placeholder="Ex: 12345" autocomplete="off"></div>
+        <div class="field"><label class="field-label">Turno *</label>
+          <select id="in-shift"><option value="">Selecione...</option><option value="1º Turno">1º Turno</option><option value="2º Turno">2º Turno</option><option value="3º Turno">3º Turno</option></select></div>
+      </div>
       <div class="cad-btns">
         <button class="btn-save" id="in-save" onclick="saveInsp()"><span id="in-save-lbl">SALVAR INSPETOR</span></button>
         <button class="btn-ghost" id="in-cancel" onclick="cancelInsp()" style="display:none">Cancelar</button>
@@ -862,8 +867,8 @@ select:disabled{opacity:.75;cursor:not-allowed;}
       <div class="panel-title">Inspetores <span id="in-count" style="color:var(--accent)">0</span></div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Nome</th><th>Matrícula</th><th>Status</th><th></th></tr></thead>
-          <tbody id="in-body"><tr><td class="cad-empty" colspan="4">Carregando...</td></tr></tbody>
+          <thead><tr><th>Nome</th><th>Matrícula</th><th>Turno</th><th>Status</th><th></th></tr></thead>
+          <tbody id="in-body"><tr><td class="cad-empty" colspan="5">Carregando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1001,10 +1006,10 @@ select:disabled{opacity:.75;cursor:not-allowed;}
       <table class="tbl-compact">
         <thead><tr>
           <th class="chk-col"><input type="checkbox" class="row-checkbox" id="chk-all" onchange="toggleAllChk(this)"></th>
-          <th>#</th><th>Data · Hora</th><th>Tipo</th><th>Inspetor</th>
-          <th>Amostra</th><th>Linha</th><th>Turno</th><th>SAP</th><th>Unid./Item</th><th>Espec.</th><th>Encontrado</th><th>Desvio</th><th>Status</th>
+          <th>#</th><th>Data · Hora</th><th>Tipo</th><th>Inspetor</th><th>SAP</th>
+          <th>Amostra</th><th>Linha</th><th>Turno</th><th>Unid./Item</th><th>Espec.</th><th>Encontrado</th><th>Desvio</th><th>Status</th>
         </tr></thead>
-        <tbody id="print-tbl-body"><tr><td class="empty-td" colspan="15">Carregando...</td></tr></tbody>
+        <tbody id="print-tbl-body"><tr><td class="empty-td" colspan="14">Carregando...</td></tr></tbody>
       </table>
     </div>
     <div class="pp-footer">
@@ -1385,10 +1390,11 @@ async function saveRecord(){
   if(!inspector){showToast('⚠ Informe o inspetor.');return;}
   if(!sample){showToast('⚠ Informe o código da peça.');return;}
   if(numeric&&!part){showToast('⚠ Peça não cadastrada. Cadastre-a na aba Cadastros.');return;}
-  const line=part?(part.line||null):null,shift=part?(part.shift||null):null,sap=part?(part.sap||null):null;
-  if(numeric&&(!line||!shift)){showToast('⚠ Peça '+sample+' sem linha de produção e/ou turno no cadastro. Complete os dados na aba Cadastros.');return;}
+  const insp=(window._insps||[]).find(i=>i.name===inspector&&i.active!==false);
+  if(!insp){showToast('⚠ Inspetor não cadastrado/ativo.');return;}
+  const line=part?(part.line||null):null,shift=insp.shift||null,sap=part?(part.sap||null):null;
+  if(numeric&&!shift){showToast('⚠ Inspetor '+inspector+' sem turno no cadastro. Complete em Cadastros → Inspetores.');return;}
   if(numeric&&(!ps||ps.type!==currentType)){showToast(part.specs.length>1?'⚠ Selecione a variante / ensaio da peça.':'⚠ Esta peça não tem ensaio de '+typeLabel(currentType)+'.');return;}
-  if(inspector&&!(window._insps||[]).some(i=>i.name===inspector&&i.active!==false)){showToast('⚠ Inspetor não cadastrado/ativo.');return;}
   const visItem=document.getElementById('f-vis-item').value.trim(),visLocal=document.getElementById('f-vis-local').value.trim();
   if(currentType==='visual'){
     if(!visItem){showToast('⚠ Informe o item verificado.');return;}
@@ -1547,24 +1553,24 @@ function renderTable(){
     const sc=r.status==='Aprovado'?'res-ok':'res-fail';
     const sign=(r.diff||0)>=0?'+':'';
     const isEditing=editingId===r.firestoreId;
-    return`<tr class="${isEditing?'editing-row':''}">
+    return`<tr class="row-click ${isEditing?'editing-row':''}" onclick='openEditModal(${JSON.stringify(r.firestoreId)})' title="Clique para visualizar e editar">
       <td class="td-mono">${off+i+1}</td>
       <td class="td-datetime"><span class="td-date-main">${esc(r.date||'—')}</span><span class="td-date-wd">${esc(getWd(r))}</span><span class="td-date-time">${esc(r.time||'—')}</span></td>
       <td>${typeTag(r.type)}</td>
       <td style="font-size:12px">${esc(r.inspector)}</td>
+      <td class="td-mono td-nowrap" style="font-size:11px">${esc(r.sap||'—')}</td>
       <td class="td-amostra">${esc(r.sample)}${vTag(r)}${descTag(r)}</td>
       <td class="td-nowrap" style="font-size:11px">${esc(r.line||'—')}</td>
       <td class="td-nowrap" style="font-size:11px">${esc(r.shift||'—')}</td>
-      <td class="td-mono td-nowrap" style="font-size:11px">${esc(r.sap||'—')}</td>
       <td class="td-mono">${esc(unitCell(r))}</td>
       <td class="td-mono">${esc(fmtN(r,'spec'))}</td>
       <td class="td-mono" style="font-weight:700">${esc(fmtN(r,'found'))}</td>
       <td class="td-mono" style="color:${r.status==='Aprovado'?'var(--success)':'var(--danger)'}">${fmtDev(r,sign)}</td>
       <td class="${sc}">${esc(r.status)}</td>
       <td style="white-space:nowrap">
-        <button class="print-row-btn" onclick='printSingle(${JSON.stringify(r.firestoreId)})' title="Imprimir laudo">⎙</button>
-        <button class="edit-btn" onclick='openEditModal(${JSON.stringify(r.firestoreId)})' title="Editar">✏</button>
-        <button class="del-btn" onclick='deleteRecord(${JSON.stringify(r.firestoreId)})' title="Excluir">✕</button>
+        <button class="print-row-btn" onclick='event.stopPropagation();printSingle(${JSON.stringify(r.firestoreId)})' title="Imprimir laudo">⎙</button>
+        <button class="edit-btn" onclick='event.stopPropagation();openEditModal(${JSON.stringify(r.firestoreId)})' title="Editar">✏</button>
+        <button class="del-btn" onclick='event.stopPropagation();deleteRecord(${JSON.stringify(r.firestoreId)})' title="Excluir">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -1833,10 +1839,10 @@ function renderPrintTable(){
       <td class="td-datetime"><span class="td-date-main">${esc(r.date||'—')}</span><span class="td-date-wd">${esc(getWd(r))}</span><span class="td-date-time">${esc(r.time||'—')}</span></td>
       <td>${typeTag(r.type)}</td>
       <td style="font-size:11px">${esc(r.inspector)}</td>
+      <td class="td-mono td-nowrap" style="font-size:11px">${esc(r.sap||'—')}</td>
       <td class="td-amostra">${esc(r.sample)}${vTag(r)}${descTag(r)}</td>
       <td class="td-nowrap" style="font-size:11px">${esc(r.line||'—')}</td>
       <td class="td-nowrap" style="font-size:11px">${esc(r.shift||'—')}</td>
-      <td class="td-mono td-nowrap" style="font-size:11px">${esc(r.sap||'—')}</td>
       <td class="td-mono">${esc(unitCell(r))}</td>
       <td class="td-mono">${esc(fmtN(r,'spec'))}</td>
       <td class="td-mono" style="font-weight:700">${esc(fmtN(r,'found'))}</td>
@@ -2605,7 +2611,7 @@ function onPartInput(){
   info.className='part-info';
   if(p){
     const d=(p.desc?esc(p.desc)+' · ':'');
-    const m=[p.line,p.shift,p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
+    const m=[p.line,p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
     const mm=m?'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text2);margin-top:3px;letter-spacing:.03em">'+esc(m)+'</div>':'';
     if(vis){
       info.classList.add('ok');info.innerHTML='✓ Peça cadastrada: '+d+'<strong>'+esc(p.code)+'</strong> (inspeção visual não usa limite)'+mm;
@@ -2689,7 +2695,7 @@ function onPartInput(){
     liveCalc();return;
   }
   const d=(p.desc?esc(p.desc)+' · ':''),specs=p.specs||[];
-  const m=[p.line,p.shift,p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
+  const m=[p.line,p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
   const mm=m?'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text2);margin-top:3px;letter-spacing:.03em">'+esc(m)+'</div>':'';
   if(vis){
     wrap.style.display='none';
@@ -2760,18 +2766,17 @@ function renderParts(){
   const body=_g('pt-body');if(!body)return;
   const q=(_g('pt-search').value||'').trim().toLowerCase();
   const all=window._parts||[];
-  const list=all.filter(p=>!q||(p.code+' '+(p.desc||'')+' '+(p.line||'')+' '+(p.shift||'')+' '+(p.sap||'')+' '+p.specs.map(x=>x.variant).join(' ')).toLowerCase().includes(q));
+  const list=all.filter(p=>!q||(p.code+' '+(p.desc||'')+' '+(p.line||'')+' '+(p.sap||'')+' '+p.specs.map(x=>x.variant).join(' ')).toLowerCase().includes(q));
   _g('pt-count').textContent=all.length;
-  if(!list.length){body.innerHTML='<tr><td class="cad-empty" colspan="7">'+(all.length?'Nenhuma peça encontrada.':'Nenhuma peça cadastrada ainda.')+'</td></tr>';return;}
+  if(!list.length){body.innerHTML='<tr><td class="cad-empty" colspan="6">'+(all.length?'Nenhuma peça encontrada.':'Nenhuma peça cadastrada ainda.')+'</td></tr>';return;}
   body.innerHTML=list.map(p=>'<tr><td class="td-mono">'+esc(p.code)+'</td><td>'+esc(p.desc||'—')+'</td>'
-    +'<td style="font-size:12px">'+esc(p.line||'—')+'</td><td style="font-size:12px">'+esc(p.shift||'—')+'</td><td class="td-mono" style="font-size:12px">'+esc(p.sap||'—')+'</td><td>'
+    +'<td style="font-size:12px">'+esc(p.line||'—')+'</td><td class="td-mono" style="font-size:12px">'+esc(p.sap||'—')+'</td><td>'
     +p.specs.map(x=>'<div style="display:flex;align-items:center;gap:8px;margin:2px 0">'+typeTag(x.type)+(x.variant?'<strong style="color:var(--text)">'+esc(x.variant)+'</strong>':'')+'<span class="td-mono">'+(+x.limit).toFixed(2)+' '+esc(x.unit)+'</span></div>').join('')
     +'</td><td><div class="cad-act"><button class="tool-btn" onclick="editPart(\''+esc(p.id)+'\')">EDITAR</button><button class="tool-btn dng" onclick="deletePart(\''+esc(p.id)+'\')">EXCLUIR</button></div></td></tr>').join('');
 }
 function cancelPart(){
   editingPart=null;ptSpecs=[];
   ['pt-code','pt-desc','pt-limit','pt-var','pt-line','pt-sap'].forEach(id=>_g(id).value='');
-  _g('pt-shift').value='';
   _g('pt-code').readOnly=false;_g('pt-type').value='comp';_g('pt-unit').value='kN';_g('pt-var').value='';varChange();ptTypeChange();renderSpecs();
   _g('pt-title').textContent='Cadastro de peças';_g('pt-save-lbl').textContent='SALVAR PEÇA';
   _g('pt-save').classList.remove('edit-mode');_g('pt-cancel').style.display='none';
@@ -2780,7 +2785,7 @@ function editPart(id){
   const p=(window._parts||[]).find(x=>x.id===id);if(!p)return;
   editingPart=id;ptSpecs=p.specs.map(x=>Object.assign({},x));
   _g('pt-code').value=p.code;_g('pt-code').readOnly=true;_g('pt-desc').value=p.desc||'';
-  _g('pt-line').value=p.line||'';_g('pt-shift').value=p.shift||'';_g('pt-sap').value=p.sap||'';
+  _g('pt-line').value=p.line||'';_g('pt-sap').value=p.sap||'';
   _g('pt-limit').value='';_g('pt-var').value='';varChange();ptTypeChange();renderSpecs();
   _g('pt-title').textContent='Editando peça '+p.code;_g('pt-save-lbl').textContent='ATUALIZAR PEÇA';
   _g('pt-save').classList.add('edit-mode');_g('pt-cancel').style.display='';
@@ -2789,23 +2794,21 @@ function editPart(id){
 async function savePart(){
   if(!window._db){showToast('⚠ Firebase não conectado.');return;}
   const code=_g('pt-code').value.trim(),desc=_g('pt-desc').value.trim();
-  const line=_g('pt-line').value.trim(),shift=_g('pt-shift').value,sap=_g('pt-sap').value.trim();
+  const line=_g('pt-line').value.trim(),sap=_g('pt-sap').value.trim();
   if(!code){showToast('⚠ Informe o código da peça.');return;}
   if(!/^[\w.\-]+$/.test(code)){showToast('⚠ Código: use só letras, números, ponto, hífen ou underline (sem espaços).');return;}
-  if(!line){showToast('⚠ Informe a linha de produção da peça.');return;}
-  if(!shift){showToast('⚠ Selecione o turno da peça.');return;}
   if(_g('pt-limit').value!==''&&!addSpec())return;   // aproveita o que já está digitado
   if(!ptSpecs.length){showToast('⚠ Adicione ao menos uma especificação (tipo + limite).');return;}
   const id=editingPart||code.toUpperCase();
   if(!editingPart&&(window._parts||[]).some(p=>p.id===id)){showToast('⚠ Já existe uma peça com o código '+code+'.');return;}
-  const msg='Confirmar cadastro?\n\nPeça: '+code+(desc?' — '+desc:'')+'\nLinha: '+line+' · '+shift+(sap?' · SAP '+sap:'')+'\n\n'
+  const msg='Confirmar cadastro?\n\nPeça: '+code+(desc?' — '+desc:'')+'\nLinha: '+(line||'—')+(sap?' · SAP '+sap:'')+'\n\n'
     +ptSpecs.map(x=>'• '+specLabel(x)+': '+x.limit.toFixed(2)+' '+x.unit).join('\n')
     +(editingPart?'\n\n(Alterações valem só para ensaios futuros.)':'');
   if(!confirm(msg))return;
   try{
     const{doc,setDoc,serverTimestamp}=window._fbFns;
     const old=editingPart?(window._parts||[]).find(p=>p.id===id):null;
-    await setDoc(doc(window._db,PART_COL,id),{code:old?old.code:code,desc,line,shift,sap:sap||null,specs:ptSpecs,updatedAt:serverTimestamp()});
+    await setDoc(doc(window._db,PART_COL,id),{code:old?old.code:code,desc,line:line||null,sap:sap||null,specs:ptSpecs,updatedAt:serverTimestamp()});
     showToast('✓ Peça '+code+' salva.');cancelPart();
   }catch(e){showToast('⚠ Erro: '+e.message);}
 }
@@ -2821,33 +2824,34 @@ function renderInsps(){
   const body=_g('in-body');if(!body)return;
   const all=window._insps||[];
   _g('in-count').textContent=all.length;
-  if(!all.length){body.innerHTML='<tr><td class="cad-empty" colspan="4">Nenhum inspetor cadastrado ainda.</td></tr>';return;}
+  if(!all.length){body.innerHTML='<tr><td class="cad-empty" colspan="5">Nenhum inspetor cadastrado ainda.</td></tr>';return;}
   body.innerHTML=all.map(i=>{const on=i.active!==false;
-    return '<tr><td class="td-mono">'+esc(i.name)+'</td><td>'+esc(i.mat||'—')+'</td><td>'+(on?'<span class="tag-on">ATIVO</span>':'<span class="tag-off">INATIVO</span>')+'</td>'
+    return '<tr><td class="td-mono">'+esc(i.name)+'</td><td>'+esc(i.mat||'—')+'</td><td style="font-size:12px">'+esc(i.shift||'—')+'</td><td>'+(on?'<span class="tag-on">ATIVO</span>':'<span class="tag-off">INATIVO</span>')+'</td>'
     +'<td><div class="cad-act"><button class="tool-btn" onclick="editInsp(\''+esc(i.id)+'\')">EDITAR</button>'
     +'<button class="tool-btn" onclick="toggleInsp(\''+esc(i.id)+'\')">'+(on?'INATIVAR':'ATIVAR')+'</button>'
     +'<button class="tool-btn dng" onclick="deleteInsp(\''+esc(i.id)+'\')">EXCLUIR</button></div></td></tr>';}).join('');
 }
 function cancelInsp(){
-  editingInsp=null;_g('in-name').value='';_g('in-mat').value='';
+  editingInsp=null;_g('in-name').value='';_g('in-mat').value='';_g('in-shift').value='';
   _g('in-title').textContent='Cadastro de inspetores';_g('in-save-lbl').textContent='SALVAR INSPETOR';
   _g('in-save').classList.remove('edit-mode');_g('in-cancel').style.display='none';
 }
 function editInsp(id){
   const i=(window._insps||[]).find(x=>x.id===id);if(!i)return;
-  editingInsp=id;_g('in-name').value=i.name;_g('in-mat').value=i.mat||'';
+  editingInsp=id;_g('in-name').value=i.name;_g('in-mat').value=i.mat||'';_g('in-shift').value=i.shift||'';
   _g('in-title').textContent='Editando inspetor';_g('in-save-lbl').textContent='ATUALIZAR INSPETOR';
   _g('in-save').classList.add('edit-mode');_g('in-cancel').style.display='';_g('in-name').focus();
 }
 async function saveInsp(){
   if(!window._db){showToast('⚠ Firebase não conectado.');return;}
-  const name=_g('in-name').value.trim().replace(/\s+/g,' '),mat=_g('in-mat').value.trim();
+  const name=_g('in-name').value.trim().replace(/\s+/g,' '),mat=_g('in-mat').value.trim(),shift=_g('in-shift').value;
   if(!name){showToast('⚠ Informe o nome do inspetor.');return;}
+  if(!shift){showToast('⚠ Selecione o turno do inspetor.');return;}
   if((window._insps||[]).some(i=>i.id!==editingInsp&&i.name.toLowerCase()===name.toLowerCase())){showToast('⚠ Já existe um inspetor com esse nome.');return;}
   try{
     const{collection,addDoc,doc,updateDoc,serverTimestamp}=window._fbFns;
-    if(editingInsp)await updateDoc(doc(window._db,INSP_COL,editingInsp),{name,mat,updatedAt:serverTimestamp()});
-    else await addDoc(collection(window._db,INSP_COL),{name,mat,active:true,createdAt:serverTimestamp()});
+    if(editingInsp)await updateDoc(doc(window._db,INSP_COL,editingInsp),{name,mat,shift,updatedAt:serverTimestamp()});
+    else await addDoc(collection(window._db,INSP_COL),{name,mat,shift,active:true,createdAt:serverTimestamp()});
     showToast('✓ Inspetor salvo.');cancelInsp();
   }catch(e){showToast('⚠ Erro: '+e.message);}
 }
