@@ -583,7 +583,8 @@ select:disabled{opacity:.75;cursor:not-allowed;}
 .spec-add:hover{background:var(--accent);color:#000;}
 .sp-x{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px;}
 .sp-x:hover{color:var(--danger);}
-
+.sp-e:hover{color:var(--accent);}
+.spec-editing{border-color:var(--accent);background:var(--accentL);}
 </style>
 </head>
 <body>
@@ -764,7 +765,7 @@ select:disabled{opacity:.75;cursor:not-allowed;}
     <div class="table-section" style="margin-bottom:0">
       <div class="drill-bar" id="drill-bar"></div>
       <div class="tbl-toolbar">
-        <div class="panel-title" style="margin-bottom:0">Histórico — período selecionado</div>
+        <div class="panel-title" style="margin-bottom:0">Histórico — período selecionado <span style="font-family:'Barlow',sans-serif;font-weight:400;font-size:11px;color:var(--text2,#8a97a8);letter-spacing:0;text-transform:none">· clique no ensaio (ou ✏) para editar · ✕ exclui</span></div>
         <div class="tbl-actions">
           <input class="tbl-search" id="tbl-search" placeholder="Filtrar..." oninput="tblPage=1;renderTable()">
           <button class="tool-btn" onclick="exportCSV()">↓ CSV</button>
@@ -806,14 +807,14 @@ select:disabled{opacity:.75;cursor:not-allowed;}
 
     <div class="panel">
       <div class="panel-title" id="pt-title">Cadastro de peças</div>
-      <div class="cad-note">O inspetor digita apenas o <strong>código</strong> no ensaio; <strong>tipo, limite/unidade (ou item do estudo visual), linha de produção e código SAP vêm daqui</strong> e não podem ser digitados no ensaio. O <strong>turno</strong> é do inspetor (aba Inspetores). Regra de aprovação: <em>valor encontrado ≥ limite</em>. Uma peça pode ter <strong>várias especificações</strong> (ex.: LE e LD, cavidade 1 e 2, estouro e tração, <strong>estudos visuais</strong> com itens de verificação — eles viram sugestão no ensaio visual). Alterar um limite vale só para ensaios futuros — os já gravados mantêm o valor da época. O <strong>código pode ser renomeado</strong>: os ensaios existentes passam a mostrar o código novo.</div>
+      <div class="cad-note">O inspetor digita apenas o <strong>código</strong> no ensaio; <strong>tipo, limite/unidade (ou item do estudo visual) e código SAP vêm daqui</strong> e não podem ser digitados no ensaio. Cada especificação <strong>deve ter a sua linha de produção</strong> (ex.: 04C.133.201.AB → visual na Injeção, tração na Montagem) — ao executar o teste, o item e a linha corretos abrem automaticamente. O <strong>turno</strong> é do inspetor (aba Inspetores). Regra de aprovação: <em>valor encontrado ≥ limite</em>. Alterar um limite vale só para ensaios futuros — os já gravados mantêm o valor da época. O <strong>código pode ser renomeado</strong>: os ensaios existentes passam a mostrar o código novo.</div>
       <div class="row2">
         <div class="field"><label class="field-label">Código da peça *</label><input type="text" id="pt-code" placeholder="Ex: CP-001" autocomplete="off"></div>
         <div class="field"><label class="field-label">Descrição</label><input type="text" id="pt-desc" placeholder="Ex: Coletor de admissão" autocomplete="off"></div>
       </div>
       <div class="row2">
-        <div class="field"><label class="field-label">Linha de produção (opcional)</label><input type="text" id="pt-line" list="line-list" placeholder="Ex: Linha 02" autocomplete="off"><datalist id="line-list"><option value="Linha 01"><option value="Linha 02"><option value="Linha 03"><option value="Linha 04"><option value="Linha 05"><option value="Linha 06"><option value="Linha 07"><option value="Linha 08"></datalist></div>
         <div class="field"><label class="field-label">Código SAP</label><input type="text" id="pt-sap" placeholder="Ex: 7000012345" autocomplete="off" style="font-family:'IBM Plex Mono',monospace"></div>
+        <div></div>
       </div>
       <div class="panel-title" style="margin-top:2px">Especificações da peça</div>
       <div class="row2" id="pt-var-row" style="grid-template-columns:1fr">
@@ -833,8 +834,12 @@ select:disabled{opacity:.75;cursor:not-allowed;}
             <option value="N">N</option><option value="mm">mm</option><option value="psi">psi</option><option value="bar">bar</option>
           </select></div>
         <div class="field field-hi" id="pt-item-wrap" style="display:none"><label class="field-label">Item verificado *</label><input type="text" id="pt-item" list="vis-items" placeholder="Ex: Bolhas em furos" autocomplete="off" maxlength="60"></div>
+        <div class="field field-hi" id="pt-specline-wrap"><label class="field-label">Linha deste ensaio *</label><input type="text" id="pt-spec-line" list="line-list" placeholder="Ex: Injeção, Montagem, Linha 02" autocomplete="off" maxlength="40"><datalist id="line-list"><option value="Injeção"><option value="Montagem"><option value="Linha 01"><option value="Linha 02"><option value="Linha 03"><option value="Linha 04"><option value="Linha 05"><option value="Linha 06"><option value="Linha 07"><option value="Linha 08"></datalist></div>
       </div>
-      <button class="tool-btn spec-add" onclick="addSpec()">＋ ADICIONAR ESPECIFICAÇÃO À PEÇA</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="tool-btn spec-add" id="pt-add-btn" onclick="addSpec()" style="width:auto;flex:1;margin-bottom:0">＋ ADICIONAR ESPECIFICAÇÃO À PEÇA</button>
+        <button class="btn-ghost" id="pt-spec-cancel" onclick="cancelSpecEdit()" style="display:none;white-space:nowrap">Cancelar edição</button>
+      </div>
       <div id="pt-specs" style="margin-bottom:12px"></div>
       <div class="cad-btns">
         <button class="btn-save" id="pt-save" onclick="savePart()"><span id="pt-save-lbl">SALVAR PEÇA</span></button>
@@ -846,8 +851,8 @@ select:disabled{opacity:.75;cursor:not-allowed;}
       </div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Código</th><th>Descrição</th><th>Linha</th><th>SAP</th><th>Especificações (tipo · variante · limite)</th><th></th></tr></thead>
-          <tbody id="pt-body"><tr><td class="cad-empty" colspan="6">Carregando...</td></tr></tbody>
+          <thead><tr><th>Código</th><th>Descrição</th><th>SAP</th><th>Especificações (tipo · variante · limite · linha)</th><th></th></tr></thead>
+          <tbody id="pt-body"><tr><td class="cad-empty" colspan="5">Carregando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1158,6 +1163,7 @@ select:disabled{opacity:.75;cursor:not-allowed;}
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
       <button class="btn-save-modal" onclick="saveEdit()">💾 SALVAR ALTERAÇÕES</button>
+      <button class="btn-save-modal" id="em-next-btn" onclick="saveEdit(true)" style="display:none;flex:1;background:var(--success)">SALVAR E PRÓXIMO →</button>
     </div>
   </div>
 </div>
@@ -1205,6 +1211,7 @@ function toggleTheme(){
 // ── STATE ──
 let currentType='comp';
 let editingId=null;
+let editedVis=[];   // estudos visuais já atualizados na sequência "salvar e próximo"
 let chartsReady=false;
 let filteredRecords=null;
 let analiseSpec=null;   // filtros aplicados na aba Análise (reaproveitados no drill-down)
@@ -1312,10 +1319,16 @@ function fmtN(r,k){if(r.type==='visual')return k==='spec'?'OK':(r.visResult||'�
 function fmtDev(r,sign){return r.type==='visual'?'—':sign+(+r.desvio).toFixed(1)+'%';}
 function unitCell(r){return r.type==='visual'?(r.visItem||'—'):r.unit;}
 function toggleEditVis(){
-  const v=document.getElementById('em-type').value==='visual';
+  const t=document.getElementById('em-type').value,v=t==='visual';
   document.getElementById('em-spec').closest('.modal-row').style.display=v?'none':'';
   document.getElementById('em-result-box').style.display=v?'none':'';
   document.getElementById('em-vis-block').style.display=v?'':'none';
+  if(!v&&document.getElementById('em-unit').value==='—'){
+    // veio de um ensaio visual: carrega a unidade da especificação da peça (ou padrão)
+    const pp=findPart(document.getElementById('em-sample').value);
+    const same=pp?(pp.specs||[]).filter(x=>x.type===t):[];
+    document.getElementById('em-unit').value=(t==='burst'||t==='leak')?'bar':(same.length?same[0].unit:'kN');
+  }
   calcEditModal();
 }
 function emAutoWd(){
@@ -1393,10 +1406,15 @@ async function saveRecord(){
   if(numeric&&!part){showToast('⚠ Peça não cadastrada. Cadastre-a na aba Cadastros.');return;}
   const insp=(window._insps||[]).find(i=>i.name===inspector&&i.active!==false);
   if(!insp){showToast('⚠ Inspetor não cadastrado/ativo.');return;}
-  const line=part?(part.line||null):null,shift=insp.shift||null,sap=part?(part.sap||null):null;
+  const shift=insp.shift||null,sap=part?(part.sap||null):null;
   if(numeric&&!shift){showToast('⚠ Inspetor '+inspector+' sem turno no cadastro. Complete em Cadastros → Inspetores.');return;}
   if(numeric&&(!ps||ps.type!==currentType)){showToast(part.specs.length>1?'⚠ Selecione a variante / ensaio da peça.':'⚠ Esta peça não tem ensaio de '+typeLabel(currentType)+'.');return;}
   const visItem=document.getElementById('f-vis-item').value.trim(),visLocal=document.getElementById('f-vis-local').value.trim();
+  let line=null;
+  if(part){
+    if(numeric)line=(ps&&ps.line)||part.line||null;   // linha da especificação; fallback: linha padrão da peça
+    else{const vs=(part.specs||[]).find(x=>x.type==='visual'&&x.item&&x.item.toLowerCase()===visItem.toLowerCase());line=(vs&&vs.line)||part.line||null;}
+  }
   if(currentType==='visual'){
     if(!visItem){showToast('⚠ Informe o item verificado.');return;}
     if(!visResult){showToast('⚠ Selecione OK ou NOT OK.');return;}
@@ -1430,18 +1448,47 @@ async function saveRecord(){
       type:currentType,inspector,sample:(part?part.code:sample),line,shift,sap:sap||null,specSource:isVis?null:'cadastro',variant:isVis?null:(ps.variant||null),spec:isVis?null:spec,found:isVis?null:found,unit:unitOut,diff,desvio,status,notes,
       ...(isVis?{visItem,visLocal,visResult}:{})
     });
-    showToast(status==='Aprovado'?'✓ Aprovado — salvo!':'✗ Reprovado — salvo.');
-    clearForm();
+    if(isVis&&part&&(part.specs||[]).filter(x=>x.type==='visual'&&x.item).length>1){
+      const adv=advanceVisualStudy(part,visItem,recDateFull);
+      showToast((status==='Aprovado'?'✓ Aprovado — salvo':'✗ Reprovado — salvo')+(adv?' — próximo estudo carregado, continue!':' — todos os estudos visuais desta peça registrados!'));
+    }else{
+      clearForm();
+      showToast(status==='Aprovado'?'✓ Aprovado — salvo!':'✗ Reprovado — salvo.');
+    }
   }catch(e){showToast('⚠ Erro: '+e.message);}
   finally{btn.disabled=false;sp.style.display='none';lbl.textContent='REGISTRAR RESULTADO';}
 }
 
+// após registrar um estudo visual: mantém amostra/inspetor e carrega o próximo estudo pendente do dia
+function advanceVisualStudy(part,savedItem,recDateFull){
+  const today=recDateFull||localISO(new Date());
+  const done=new Set((window._records||[]).filter(r=>r.type==='visual'&&r.sample===part.code&&r.dateFull===today&&r.visItem).map(r=>r.visItem.toLowerCase()));
+  done.add(String(savedItem||'').toLowerCase());
+  const visSpecs=(part.specs||[]).filter(x=>x.type==='visual'&&x.item);
+  const idx=(part.specs||[]).findIndex(x=>x.type==='visual'&&x.item&&!done.has(x.item.toLowerCase()));
+  if(idx<0){clearForm();return false;}
+  _g('f-spec-sel').value=String(idx);
+  setVisResult(null);
+  _g('f-notes').value='';
+  onSpecSel();   // carrega item/linha/info do próximo estudo
+  const x=part.specs[idx];
+  const info=_g('part-info');
+  info.className='part-info ok';
+  info.innerHTML='✓ Estudo <strong>'+esc(savedItem)+'</strong> registrado ('+Math.min(done.size,visSpecs.length)+'/'+visSpecs.length+') — <strong>próximo: '+esc(x.item)+'</strong>'+(x.line?' — linha '+esc(x.line):'')+'. Registre o resultado.';
+  return true;
+}
+
 // ── EDIT ──
-function openEditModal(fid){
+function openEditModal(fid,keepChain){
   const r=(window._records||[]).find(x=>x.firestoreId===fid);
   if(!r)return;
+  if(!keepChain)editedVis=[];
   editingId=fid;
-  document.getElementById('edit-modal-sub').textContent='Amostra: '+r.sample+' · ID: '+fid.slice(0,8)+'...';
+  const isVis=r.type==='visual';
+  const sib=isVis?(window._records||[]).filter(x=>x.type==='visual'&&x.sample===r.sample&&x.firestoreId!==fid):[];
+  document.getElementById('em-next-btn').style.display=sib.length?'':'none';
+  const pend=sib.filter(x=>!editedVis.includes(x.firestoreId)).length;
+  document.getElementById('edit-modal-sub').textContent='Amostra: '+r.sample+' · ID: '+fid.slice(0,8)+'...'+(isVis?(pend>0?' · mais '+pend+(pend===1?' estudo visual':' estudos visuais')+' desta amostra':(sib.length?' · último estudo visual da sequência':' · único estudo visual da amostra')):'');
   document.getElementById('em-type').value=r.type||'comp';
   document.getElementById('em-unit').value=r.unit||'kN';
   document.getElementById('em-inspector').value=r.inspector||'';
@@ -1464,7 +1511,7 @@ function openEditModal(fid){
 }
 function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;}
 
-async function saveEdit(){
+async function saveEdit(goNext){
   if(!editingId){showToast('Nenhum registro em edição.');return;}
   const type=document.getElementById('em-type').value;
   const unit=document.getElementById('em-unit').value;
@@ -1496,6 +1543,17 @@ async function saveEdit(){
       ...(time?{time}:{}),
       ...(weekday?{weekday}:{})
     });
+    if(goNext){
+      const r0=(window._records||[]).find(x=>x.firestoreId===editingId);
+      editedVis.push(editingId);
+      const nx=(window._records||[]).filter(x=>x.type==='visual'&&r0&&x.sample===r0.sample&&!editedVis.includes(x.firestoreId)).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0))[0];
+      if(nx){
+        showToast('✓ Ensaio atualizado! Próximo estudo visual aberto.');
+        closeEditModal();openEditModal(nx.firestoreId,true);return;
+      }
+      showToast('✓ Ensaio atualizado! Todos os estudos visuais desta amostra estão atualizados.');
+      closeEditModal();return;
+    }
     showToast('✓ Ensaio atualizado!');
     closeEditModal();
   }catch(e){showToast('⚠ Erro: '+e.message);}
@@ -2619,7 +2677,7 @@ function onPartInput(){
   info.className='part-info';
   if(p){
     const d=(p.desc?esc(p.desc)+' · ':'');
-    const m=[p.line,p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
+    const m=[p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
     const mm=m?'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text2);margin-top:3px;letter-spacing:.03em">'+esc(m)+'</div>':'';
     if(vis){
       info.classList.add('ok');info.innerHTML='✓ Peça cadastrada: '+d+'<strong>'+esc(p.code)+'</strong> (inspeção visual não usa limite)'+mm;
@@ -2654,7 +2712,7 @@ function startRegistries(){
 }
 function refreshParts(){
   const dl=_g('part-list');
-  if(dl)dl.innerHTML=(window._parts||[]).map(p=>'<option value="'+esc(p.code)+'">'+esc((p.desc?p.desc+' · ':'')+p.specs.map(x=>specLabel(x)+' '+(+x.limit).toFixed(2)+' '+x.unit).join(' / '))+'</option>').join('');
+  if(dl)dl.innerHTML=(window._parts||[]).map(p=>'<option value="'+esc(p.code)+'">'+esc((p.desc?p.desc+' · ':'')+p.specs.map(x=>specLabel(x)+(x.type==='visual'?'':' — '+(+x.limit).toFixed(2)+' '+x.unit)+(x.line?' ('+x.line+')':'')).join(' / '))+'</option>').join('');
   renderParts();onPartInput();
 }
 function refreshInsps(){
@@ -2672,7 +2730,7 @@ function renderCadastros(){renderParts();renderInsps();}
 
 /* ── v11.1: várias especificações / variantes por peça ── */
 function normSpecs(d){
-  if(Array.isArray(d.specs)&&d.specs.length)return d.specs.map(x=>x.type==='visual'?{type:'visual',variant:'',item:x.item||'',limit:null,unit:'—'}:{type:x.type,variant:x.variant||'',limit:+x.limit,unit:x.unit});
+  if(Array.isArray(d.specs)&&d.specs.length)return d.specs.map(x=>x.type==='visual'?{type:'visual',variant:'',item:x.item||'',limit:null,unit:'—',line:x.line||null}:{type:x.type,variant:x.variant||'',limit:+x.limit,unit:x.unit,line:x.line||null});
   return d.type?[{type:d.type,variant:'',limit:+d.limit,unit:d.unit}]:[];
 }
 function specLabel(x){return typeLabel(x.type)+(x.type==='visual'&&x.item?' · '+x.item:(x.variant?' · '+x.variant:''));}
@@ -2704,23 +2762,52 @@ function onPartInput(){
     liveCalc();return;
   }
   const d=(p.desc?esc(p.desc)+' · ':''),specs=p.specs||[];
-  const m=[p.line,p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
+  const m=[p.sap?'SAP '+p.sap:null].filter(Boolean).join(' · ');
   const mm=m?'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text2);margin-top:3px;letter-spacing:.03em">'+esc(m)+'</div>':'';
   if(vis){
-    const items=specs.filter(x=>x.type==='visual').map(x=>x.item).filter(Boolean);
-    setVisItemsDatalist(items.length?items:null);
-    if(items.length===1&&!_g('f-vis-item').value)_g('f-vis-item').value=items[0];
-    wrap.style.display='none';
-    info.classList.add('ok');info.innerHTML='✓ Peça cadastrada: '+d+'<strong>'+esc(p.code)+'</strong>'+(items.length?' — estudos visuais: '+esc(items.join(', ')):' (inspeção visual — itens livres)')+mm;
+    const items=specs.filter(x=>x.type==='visual');
+    setVisItemsDatalist(items.some(x=>x.item)?items.map(x=>x.item).filter(Boolean):null);
+    if(!items.length){
+      wrap.style.display='none';sel.dataset.sig='';sel.dataset.code='';
+      info.classList.add('ok');info.innerHTML='✓ Peça cadastrada: '+d+'<strong>'+esc(p.code)+'</strong> (inspeção visual — itens livres)'+(p.line?' — linha '+esc(p.line):'')+mm;
+      liveCalc();return;
+    }
+    // estudos visuais cadastrados → seletor + item/linha corretos abrem automaticamente
+    const sig=p.code+'|'+specs.map(x=>x.type==='visual'?'V'+x.item+'|'+(x.line||''):x.type+x.variant+x.limit+x.unit+(x.line||'')).join(';');
+    let idx=parseInt(sel.value);
+    if(sel.dataset.sig!==sig){
+      const keep=sel.dataset.code===p.code?idx:NaN;
+      sel.innerHTML='<option value="">Selecione...</option>'+specs.map((x,i)=>'<option value="'+i+'">'+esc(specLabel(x)+(x.type==='visual'?'':' — '+(+x.limit).toFixed(2)+' '+x.unit)+(x.line?' — '+x.line:''))+'</option>').join('');
+      sel.dataset.sig=sig;sel.dataset.code=p.code;
+      idx=(keep>=0&&keep<specs.length)?keep:NaN;
+    }
+    if(!(idx>=0&&idx<specs.length))idx=-1;
+    const same=[];specs.forEach((x,i)=>{if(x.type==='visual')same.push(i);});
+    if(idx<0||specs[idx].type!=='visual'){
+      if(same.length===1)idx=same[0];
+      else if(same.length>1)idx=-1;                       // exige escolha explícita do estudo visual
+    }
+    sel.value=idx>=0?String(idx):'';
+    wrap.style.display=specs.length>1?'':'none';
+    if(idx<0){
+      _g('f-vis-item').value='';
+      info.classList.add('warn');info.innerHTML='⚠ '+d+'<strong>'+esc(p.code)+'</strong> tem mais de um estudo visual. Escolha o item abaixo.';
+      liveCalc();return;
+    }
+    const xv=specs[idx];
+    _g('f-vis-item').value=xv.item||'';
+    const ln=xv.line||p.line||null;
+    info.classList.add('ok');
+    info.innerHTML='✓ '+d+'<strong>👁 Visual</strong> · <strong>'+esc(xv.item)+'</strong>'+(ln?' — linha <strong>'+esc(ln)+'</strong>':'')+' — carregado do cadastro'+mm;
     liveCalc();return;
   }
   if(!specs.length){wrap.style.display='none';spec.value='';info.classList.add('warn');info.textContent='⚠ Peça sem especificações cadastradas.';liveCalc();return;}
   // (re)monta a lista de variantes quando a peça ou os limites mudam
-  const sig=p.code+'|'+specs.map(x=>x.type+x.variant+x.limit+x.unit).join(';');
+  const sig=p.code+'|'+specs.map(x=>x.type+x.variant+x.limit+x.unit+(x.line||'')).join(';');
   let idx=parseInt(sel.value);
   if(sel.dataset.sig!==sig){
     const keep=sel.dataset.code===p.code?idx:NaN;
-    sel.innerHTML='<option value="">Selecione...</option>'+specs.map((x,i)=>'<option value="'+i+'">'+esc(specLabel(x)+' — '+(+x.limit).toFixed(2)+' '+x.unit)+'</option>').join('');
+    sel.innerHTML='<option value="">Selecione...</option>'+specs.map((x,i)=>'<option value="'+i+'">'+esc(specLabel(x)+' — '+(+x.limit).toFixed(2)+' '+x.unit+(x.line?' — '+x.line:''))+'</option>').join('');
     sel.dataset.sig=sig;sel.dataset.code=p.code;
     idx=(keep>=0&&keep<specs.length)?keep:NaN;
   }
@@ -2740,22 +2827,72 @@ function onPartInput(){
   }
   const x=specs[idx];
   spec.value=x.limit;unit.value=x.unit;
+  const ln=x.line||p.line||null;
   info.classList.add('ok');
-  info.innerHTML='✓ '+d+'<strong>'+esc(typeLabel(x.type))+'</strong>'+(x.variant?' · <strong>'+esc(x.variant)+'</strong>':'')+' · limite mín. <strong>'+(+x.limit).toFixed(2)+' '+esc(x.unit)+'</strong> — carregado do cadastro'+mm;
+  info.innerHTML='✓ '+d+'<strong>'+esc(typeLabel(x.type))+'</strong>'+(x.variant?' · <strong>'+esc(x.variant)+'</strong>':'')+' · limite mín. <strong>'+(+x.limit).toFixed(2)+' '+esc(x.unit)+'</strong>'+(ln?' — linha <strong>'+esc(ln)+'</strong>':'')+' — carregado do cadastro'+mm;
   liveCalc();
 }
 
 /* — cadastro de peças: especificações — */
 let ptSpecs=[];
+let editingSpec=-1;
 function varChange(){}
+function editSpec(i){
+  const x=ptSpecs[i];if(!x)return;
+  editingSpec=i;
+  _g('pt-type').value=x.type;ptTypeChange();
+  if(x.type==='visual'){
+    _g('pt-item').value=x.item||'';
+    _g('pt-limit').value='';_g('pt-var').value='';varChange();
+  }else{
+    _g('pt-limit').value=x.limit;_g('pt-unit').value=x.unit;_g('pt-var').value=x.variant||'';
+    _g('pt-item').value='';
+  }
+  _g('pt-spec-line').value=x.line||'';
+  _g('pt-add-btn').textContent='⟳ ATUALIZAR ESPECIFICAÇÃO';
+  _g('pt-spec-cancel').style.display='';
+  renderSpecs();
+  document.getElementById('pt-type').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function cancelSpecEdit(){
+  editingSpec=-1;
+  _g('pt-limit').value='';_g('pt-var').value='';_g('pt-item').value='';_g('pt-spec-line').value='';varChange();ptTypeChange();
+  _g('pt-add-btn').textContent='＋ ADICIONAR ESPECIFICAÇÃO À PEÇA';
+  _g('pt-spec-cancel').style.display='none';
+  renderSpecs();
+}
+function updateSpec(){
+  const old=ptSpecs[editingSpec];
+  if(!old){cancelSpecEdit();return true;}
+  const type=_g('pt-type').value,sl=_g('pt-spec-line').value.trim();
+  if(!sl){showToast('⚠ Informe a linha deste ensaio (ex: Injeção, Montagem, Linha 02).');return false;}
+  if(type==='visual'){
+    const item=_g('pt-item').value.trim();
+    if(!item){showToast('⚠ Informe o item verificado (ex: Bolhas em furos).');return false;}
+    if(ptSpecs.some((s,j)=>j!==editingSpec&&s.type==='visual'&&s.item&&s.item.toLowerCase()===item.toLowerCase())){showToast('⚠ Este item visual já está adicionado nesta peça.');return false;}
+    ptSpecs[editingSpec]={type:'visual',variant:'',item,limit:null,unit:'—',line:sl};
+  }else{
+    const limit=parseFloat(_g('pt-limit').value),unit=(type==='burst'||type==='leak')?'bar':_g('pt-unit').value;
+    if(!isFinite(limit)||limit<=0){showToast('⚠ Informe um limite maior que zero.');return false;}
+    const v=_g('pt-var').value.trim();
+    const vars=v?[...new Set(v.split(/\s*[+|;]\s*/).map(t=>t.trim()).filter(Boolean))]:[''];
+    for(const vr of vars){
+      if(ptSpecs.some((s,j)=>j!==editingSpec&&s.type===type&&s.variant===vr)){showToast('⚠ Já existe '+specLabel({type,variant:vr})+' nesta peça.');return false;}
+    }
+    ptSpecs=[...ptSpecs.slice(0,editingSpec),...vars.map(vr=>({type,variant:vr,limit,unit,line:sl})),...ptSpecs.slice(editingSpec+1)];
+  }
+  cancelSpecEdit();
+  return true;
+}
 function addSpec(){
-  const type=_g('pt-type').value;
+  const type=_g('pt-type').value,sl=_g('pt-spec-line')?_g('pt-spec-line').value.trim():'';
+  if(!sl){showToast('⚠ Informe a linha deste ensaio (ex: Injeção, Montagem, Linha 02).');return false;}
   if(type==='visual'){
     const item=_g('pt-item').value.trim();
     if(!item){showToast('⚠ Informe o item verificado (ex: Bolhas em furos).');return false;}
     if(ptSpecs.some(x=>x.type==='visual'&&(x.item||'').toLowerCase()===item.toLowerCase())){showToast('⚠ Este item visual já está adicionado nesta peça.');return false;}
-    ptSpecs.push({type:'visual',variant:'',item,limit:null,unit:'—'});
-    _g('pt-item').value='';
+    ptSpecs.push({type:'visual',variant:'',item,limit:null,unit:'—',line:sl});
+    _g('pt-item').value='';_g('pt-spec-line').value='';
     renderSpecs();return true;
   }
   const limit=parseFloat(_g('pt-limit').value),unit=(type==='burst'||type==='leak')?'bar':_g('pt-unit').value;
@@ -2765,14 +2902,18 @@ function addSpec(){
   for(const vr of vars){
     if(ptSpecs.some(x=>x.type===type&&x.variant===vr)){showToast('⚠ Já existe '+specLabel({type,variant:vr})+' nesta peça.');return false;}
   }
-  vars.forEach(vr=>ptSpecs.push({type,variant:vr,limit,unit}));
-  _g('pt-limit').value='';_g('pt-var').value='';varChange();
+  vars.forEach(vr=>ptSpecs.push({type,variant:vr,limit,unit,line:sl}));
+  _g('pt-limit').value='';_g('pt-var').value='';_g('pt-spec-line').value='';varChange();
   renderSpecs();return true;
 }
-function removeSpec(i){ptSpecs.splice(i,1);renderSpecs();}
+function removeSpec(i){
+  ptSpecs.splice(i,1);
+  if(editingSpec===i)cancelSpecEdit();
+  else{if(editingSpec>i)editingSpec--;renderSpecs();}
+}
 function renderSpecs(){
   const el=_g('pt-specs');if(!el)return;
-  el.innerHTML=ptSpecs.length?ptSpecs.map((x,i)=>'<div class="spec-row"><span class="sr-l">'+typeTag(x.type)+(x.type==='visual'?'<strong>'+esc(x.item||'—')+'</strong>':((x.variant?'<strong>'+esc(x.variant)+'</strong>':'<span style="color:var(--text3)">sem variante</span>')+'<span class="td-mono">'+(+x.limit).toFixed(2)+' '+esc(x.unit)+'</span>'))+'</span><button class="sp-x" title="Remover" onclick="removeSpec('+i+')">✕</button></div>').join('')
+  el.innerHTML=ptSpecs.length?ptSpecs.map((x,i)=>'<div class="spec-row'+(editingSpec===i?' spec-editing':'')+'"><span class="sr-l">'+typeTag(x.type)+(x.type==='visual'?'<strong>'+esc(x.item||'—')+'</strong>':((x.variant?'<strong>'+esc(x.variant)+'</strong>':'<span style="color:var(--text3)">sem variante</span>')+'<span class="td-mono">'+(+x.limit).toFixed(2)+' '+esc(x.unit)+'</span>'))+(x.line?'<span style="font-size:11px;color:var(--accent)">'+esc(x.line)+'</span>':'')+'</span><span style="display:flex;gap:2px"><button class="sp-x sp-e" title="Editar especificação" onclick="editSpec('+i+')">✏</button><button class="sp-x" title="Remover" onclick="removeSpec('+i+')">✕</button></span></div>').join('')
     :'<div class="cad-empty" style="padding:8px">Nenhuma especificação adicionada ainda.</div>';
 }
 
@@ -2790,42 +2931,50 @@ function renderParts(){
   const body=_g('pt-body');if(!body)return;
   const q=(_g('pt-search').value||'').trim().toLowerCase();
   const all=window._parts||[];
-  const list=all.filter(p=>!q||(p.code+' '+(p.desc||'')+' '+(p.line||'')+' '+(p.sap||'')+' '+p.specs.map(x=>(x.variant||'')+' '+(x.item||'')).join(' ')).toLowerCase().includes(q));
+  const list=all.filter(p=>!q||(p.code+' '+(p.desc||'')+' '+(p.sap||'')+' '+p.specs.map(x=>(x.variant||'')+' '+(x.item||'')+' '+(x.line||'')).join(' ')).toLowerCase().includes(q));
   _g('pt-count').textContent=all.length;
-  if(!list.length){body.innerHTML='<tr><td class="cad-empty" colspan="6">'+(all.length?'Nenhuma peça encontrada.':'Nenhuma peça cadastrada ainda.')+'</td></tr>';return;}
+  if(!list.length){body.innerHTML='<tr><td class="cad-empty" colspan="5">'+(all.length?'Nenhuma peça encontrada.':'Nenhuma peça cadastrada ainda.')+'</td></tr>';return;}
   body.innerHTML=list.map(p=>'<tr><td class="td-mono">'+esc(p.code)+'</td><td>'+esc(p.desc||'—')+'</td>'
-    +'<td style="font-size:12px">'+esc(p.line||'—')+'</td><td class="td-mono" style="font-size:12px">'+esc(p.sap||'—')+'</td><td>'
-    +p.specs.map(x=>'<div style="display:flex;align-items:center;gap:8px;margin:2px 0">'+typeTag(x.type)+(x.type==='visual'?'<strong style="color:var(--text)">'+esc(x.item||'—')+'</strong>':((x.variant?'<strong style="color:var(--text)">'+esc(x.variant)+'</strong>':'')+'<span class="td-mono">'+(+x.limit).toFixed(2)+' '+esc(x.unit)+'</span>'))+'</div>').join('')
+    +'<td class="td-mono" style="font-size:12px">'+esc(p.sap||'—')+'</td><td>'
+    +p.specs.map(x=>'<div style="display:flex;align-items:center;gap:8px;margin:2px 0">'+typeTag(x.type)+(x.type==='visual'?'<strong style="color:var(--text)">'+esc(x.item||'—')+'</strong>':((x.variant?'<strong style="color:var(--text)">'+esc(x.variant)+'</strong>':'')+'<span class="td-mono">'+(+x.limit).toFixed(2)+' '+esc(x.unit)+'</span>'))+(x.line?'<span style="font-size:11px;color:var(--accent)">'+esc(x.line)+'</span>':'')+'</div>').join('')
     +'</td><td><div class="cad-act"><button class="tool-btn" onclick="editPart(\''+esc(p.id)+'\')">EDITAR</button><button class="tool-btn dng" onclick="deletePart(\''+esc(p.id)+'\')">EXCLUIR</button></div></td></tr>').join('');
 }
 function cancelPart(){
-  editingPart=null;ptSpecs=[];
-  ['pt-code','pt-desc','pt-limit','pt-var','pt-line','pt-sap','pt-item'].forEach(id=>_g(id).value='');
+  editingPart=null;ptSpecs=[];editingSpec=-1;
+  _g('pt-add-btn').textContent='＋ ADICIONAR ESPECIFICAÇÃO À PEÇA';_g('pt-spec-cancel').style.display='none';
+  ['pt-code','pt-desc','pt-limit','pt-var','pt-sap','pt-item','pt-spec-line'].forEach(id=>_g(id).value='');
   _g('pt-code').readOnly=false;_g('pt-type').value='comp';_g('pt-unit').value='kN';_g('pt-var').value='';varChange();ptTypeChange();renderSpecs();
   _g('pt-title').textContent='Cadastro de peças';_g('pt-save-lbl').textContent='SALVAR PEÇA';
   _g('pt-save').classList.remove('edit-mode');_g('pt-cancel').style.display='none';
 }
 function editPart(id){
   const p=(window._parts||[]).find(x=>x.id===id);if(!p)return;
-  editingPart=id;ptSpecs=p.specs.map(x=>Object.assign({},x));
+  editingPart=id;ptSpecs=p.specs.map(x=>Object.assign({},x));editingSpec=-1;
+  _g('pt-add-btn').textContent='＋ ADICIONAR ESPECIFICAÇÃO À PEÇA';_g('pt-spec-cancel').style.display='none';
   _g('pt-code').value=p.code;_g('pt-desc').value=p.desc||'';
-  _g('pt-line').value=p.line||'';_g('pt-sap').value=p.sap||'';
-  _g('pt-limit').value='';_g('pt-var').value='';_g('pt-item').value='';varChange();ptTypeChange();renderSpecs();
+  _g('pt-sap').value=p.sap||'';
+  _g('pt-limit').value='';_g('pt-var').value='';_g('pt-item').value='';_g('pt-spec-line').value='';varChange();ptTypeChange();renderSpecs();
   _g('pt-title').textContent='Editando peça '+p.code;_g('pt-save-lbl').textContent='ATUALIZAR PEÇA';
   _g('pt-save').classList.add('edit-mode');_g('pt-cancel').style.display='';
   _g('pt-code').scrollIntoView({behavior:'smooth',block:'center'});
 }
 /* — propagação do cadastro para o histórico — */
-async function syncPartRecords(codes,newCode,line,sap){
-  // Atualiza código (renomeação)/linha/SAP em TODOS os ensaios gravados da peça (inclusive fora do período carregado).
+async function syncPartRecords(codes,newCode,part){
+  // Atualiza código (renomeação), SAP e a linha de cada ensaio conforme a especificação (variante/item) gravada nele.
   try{
     const{collection,query,where,getDocs,writeBatch,doc}=window._fbFns;
     const snap=await getDocs(query(collection(window._db,window._col),where('sample','in',codes)));
     if(snap.empty)return 0;
-    const docs=[];snap.forEach(d=>docs.push(d.id));
+    const docs=[];snap.forEach(d=>docs.push({id:d.id,data:d.data()}));
     for(let i=0;i<docs.length;i+=450){
       const batch=writeBatch(window._db);
-      docs.slice(i,i+450).forEach(did=>batch.update(doc(window._db,window._col,did),{sample:newCode,line,sap}));
+      docs.slice(i,i+450).forEach(o=>{
+        const r=o.data||{};
+        let ln=part.line||r.line||null;   // fallback: linha legada da peça → linha já gravada no ensaio
+        if(r.type==='visual'&&r.visItem){const sp=(part.specs||[]).find(x=>x.type==='visual'&&x.item===r.visItem);if(sp&&sp.line)ln=sp.line;}
+        else if(r.type){const sp=(part.specs||[]).find(x=>x.type===r.type&&(x.variant||'')===(r.variant||''));if(sp&&sp.line)ln=sp.line;}
+        batch.update(doc(window._db,window._col,o.id),{sample:newCode,line:ln,sap:part.sap||null});
+      });
       await batch.commit();
     }
     return docs.length;
@@ -2849,27 +2998,30 @@ async function syncInspectorRecords(names,name,shift){
 async function savePart(){
   if(!window._db){showToast('⚠ Firebase não conectado.');return;}
   const code=_g('pt-code').value.trim(),desc=_g('pt-desc').value.trim();
-  const line=_g('pt-line').value.trim(),sap=_g('pt-sap').value.trim();
+  const sap=_g('pt-sap').value.trim();
   if(!code){showToast('⚠ Informe o código da peça.');return;}
   if(!/^[\w.\-]+$/.test(code)){showToast('⚠ Código: use só letras, números, ponto, hífen ou underline (sem espaços).');return;}
-  if(_g('pt-limit').value!==''&&!addSpec())return;   // aproveita o que já está digitado
-  if(_g('pt-item')&&_g('pt-item').value.trim()!==''&&!addSpec())return;   // idem item visual digitado
+  if(editingSpec>=0){if(!updateSpec())return;}   // especificação em edição é atualizada antes de salvar a peça
+  else{
+    if(_g('pt-limit').value!==''&&!addSpec())return;   // aproveita o que já está digitado
+    if(_g('pt-item')&&_g('pt-item').value.trim()!==''&&!addSpec())return;   // idem item visual digitado
+  }
   if(!ptSpecs.length){showToast('⚠ Adicione ao menos uma especificação (tipo + limite) ou item visual.');return;}
   const newId=code.toUpperCase();
   if((window._parts||[]).some(p=>p.id===newId&&p.id!==editingPart)){showToast('⚠ Já existe uma peça com o código '+code+'.');return;}
   const old=editingPart?(window._parts||[]).find(p=>p.id===editingPart):null;
   const oldCode=old?old.code:code;
   const renamed=!!editingPart&&oldCode!==newId;
-  const msg='Confirmar cadastro?\n\nPeça: '+(renamed?oldCode+' → '+newId:newId)+(desc?' — '+desc:'')+'\nLinha: '+(line||'—')+(sap?' · SAP '+sap:'')+'\n\n'
-    +ptSpecs.map(x=>'• '+specLabel(x)+(x.type==='visual'?': '+x.item:': '+(+x.limit).toFixed(2)+' '+x.unit)).join('\n')
+  const msg='Confirmar cadastro?\n\nPeça: '+(renamed?oldCode+' → '+newId:newId)+(desc?' — '+desc:'')+(sap?' · SAP '+sap:'')+'\n\n'
+    +ptSpecs.map(x=>'• '+specLabel(x)+(x.type==='visual'?': '+x.item:': '+(+x.limit).toFixed(2)+' '+x.unit)+(x.line?' — linha '+x.line:'')).join('\n')
     +(editingPart?'\n\n(Limites valem só para ensaios futuros; código/linha/SAP atualizam também o histórico.)':'');
   if(!confirm(msg))return;
   try{
     const{doc,setDoc,deleteDoc,serverTimestamp}=window._fbFns;
-    await setDoc(doc(window._db,PART_COL,newId),{code:newId,desc,line:line||null,sap:sap||null,specs:ptSpecs,updatedAt:serverTimestamp()});
+    await setDoc(doc(window._db,PART_COL,newId),{code:newId,desc,line:old?(old.line||null):null,sap:sap||null,specs:ptSpecs,updatedAt:serverTimestamp()});
     if(renamed)await deleteDoc(doc(window._db,PART_COL,editingPart));
     let n=0;
-    if(editingPart)n=await syncPartRecords([...new Set([oldCode,newId])],newId,line||null,sap||null);
+    if(editingPart)n=await syncPartRecords([...new Set([oldCode,newId])],newId,{line:old?(old.line||null):null,sap:sap||null,specs:ptSpecs});
     showToast('✓ Peça '+newId+' salva.'+(n?' '+n+' ensaio'+(n>1?'s':'')+' do histórico atualizado'+(n>1?'s':'')+(renamed?' (código novo)':'')+'.':''));
     cancelPart();
   }catch(e){showToast('⚠ Erro: '+e.message);}
