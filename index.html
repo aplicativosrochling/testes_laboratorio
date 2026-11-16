@@ -2791,6 +2791,37 @@ function editPart(id){
   _g('pt-save').classList.add('edit-mode');_g('pt-cancel').style.display='';
   _g('pt-code').scrollIntoView({behavior:'smooth',block:'center'});
 }
+/* — propagação do cadastro para o histórico — */
+async function syncPartRecords(codes,line,sap){
+  // Atualiza linha/SAP em TODOS os ensaios gravados da peça (inclusive fora do período carregado).
+  try{
+    const{collection,query,where,getDocs,writeBatch,doc}=window._fbFns;
+    const snap=await getDocs(query(collection(window._db,window._col),where('sample','in',codes)));
+    if(snap.empty)return 0;
+    const docs=[];snap.forEach(d=>docs.push(d.id));
+    for(let i=0;i<docs.length;i+=450){
+      const batch=writeBatch(window._db);
+      docs.slice(i,i+450).forEach(did=>batch.update(doc(window._db,window._col,did),{line,sap}));
+      await batch.commit();
+    }
+    return docs.length;
+  }catch(e){showToast('⚠ Peça salva, mas não foi possível atualizar o histórico: '+e.message);return 0;}
+}
+async function syncInspectorRecords(names,name,shift){
+  // Atualiza turno (e nome, se mudou) em TODOS os ensaios gravados desse inspetor.
+  try{
+    const{collection,query,where,getDocs,writeBatch,doc}=window._fbFns;
+    const snap=await getDocs(query(collection(window._db,window._col),where('inspector','in',names)));
+    if(snap.empty)return 0;
+    const docs=[];snap.forEach(d=>docs.push(d.id));
+    for(let i=0;i<docs.length;i+=450){
+      const batch=writeBatch(window._db);
+      docs.slice(i,i+450).forEach(did=>batch.update(doc(window._db,window._col,did),{inspector:name,shift}));
+      await batch.commit();
+    }
+    return docs.length;
+  }catch(e){showToast('⚠ Inspetor salvo, mas não foi possível atualizar o histórico: '+e.message);return 0;}
+}
 async function savePart(){
   if(!window._db){showToast('⚠ Firebase não conectado.');return;}
   const code=_g('pt-code').value.trim(),desc=_g('pt-desc').value.trim();
@@ -2803,13 +2834,19 @@ async function savePart(){
   if(!editingPart&&(window._parts||[]).some(p=>p.id===id)){showToast('⚠ Já existe uma peça com o código '+code+'.');return;}
   const msg='Confirmar cadastro?\n\nPeça: '+code+(desc?' — '+desc:'')+'\nLinha: '+(line||'—')+(sap?' · SAP '+sap:'')+'\n\n'
     +ptSpecs.map(x=>'• '+specLabel(x)+': '+x.limit.toFixed(2)+' '+x.unit).join('\n')
-    +(editingPart?'\n\n(Alterações valem só para ensaios futuros.)':'');
+    +(editingPart?'\n\n(Limites valem só para ensaios futuros; linha/SAP atualizam também o histórico.)':'');
   if(!confirm(msg))return;
   try{
     const{doc,setDoc,serverTimestamp}=window._fbFns;
     const old=editingPart?(window._parts||[]).find(p=>p.id===id):null;
     await setDoc(doc(window._db,PART_COL,id),{code:old?old.code:code,desc,line:line||null,sap:sap||null,specs:ptSpecs,updatedAt:serverTimestamp()});
-    showToast('✓ Peça '+code+' salva.');cancelPart();
+    let n=0;
+    if(editingPart){
+      const codes=[...new Set([old?old.code:code,id])];
+      n=await syncPartRecords(codes,line||null,sap||null);
+    }
+    showToast('✓ Peça '+code+' salva.'+(n?' '+n+' ensaio'+(n>1?'s':'')+' do histórico atualizado'+(n>1?'s':'')+' (linha/SAP).':''));
+    cancelPart();
   }catch(e){showToast('⚠ Erro: '+e.message);}
 }
 async function deletePart(id){
@@ -2850,9 +2887,17 @@ async function saveInsp(){
   if((window._insps||[]).some(i=>i.id!==editingInsp&&i.name.toLowerCase()===name.toLowerCase())){showToast('⚠ Já existe um inspetor com esse nome.');return;}
   try{
     const{collection,addDoc,doc,updateDoc,serverTimestamp}=window._fbFns;
-    if(editingInsp)await updateDoc(doc(window._db,INSP_COL,editingInsp),{name,mat,shift,updatedAt:serverTimestamp()});
-    else await addDoc(collection(window._db,INSP_COL),{name,mat,shift,active:true,createdAt:serverTimestamp()});
-    showToast('✓ Inspetor salvo.');cancelInsp();
+    let n=0;
+    if(editingInsp){
+      const old=(window._insps||[]).find(x=>x.id===editingInsp);
+      await updateDoc(doc(window._db,INSP_COL,editingInsp),{name,mat,shift,updatedAt:serverTimestamp()});
+      const names=[...new Set([old?old.name:null,name].filter(Boolean))];
+      n=await syncInspectorRecords(names,name,shift||null);
+    }else{
+      await addDoc(collection(window._db,INSP_COL),{name,mat,shift,active:true,createdAt:serverTimestamp()});
+    }
+    showToast('✓ Inspetor salvo.'+(n?' '+n+' ensaio'+(n>1?'s':'')+' do histórico atualizado'+(n>1?'s':'')+' (turno/nome).':''));
+    cancelInsp();
   }catch(e){showToast('⚠ Erro: '+e.message);}
 }
 async function toggleInsp(id){
